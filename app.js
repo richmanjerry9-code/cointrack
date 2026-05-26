@@ -1,524 +1,217 @@
-/* ============================================================
-   COINTRACK — app.js
-   Personal finance tracker with Google login & cloud sync
-   ============================================================ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { 
+  getFirestore, collection, addDoc, onSnapshot, 
+  deleteDoc, doc, setDoc, query, orderBy, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-'use strict';
-
-/* ══════════════════════════════════════════════════════════
-   🔥 FIREBASE CONFIG
-   ══════════════════════════════════════════════════════════
-   1. Go to https://console.firebase.google.com
-   2. Click "Add project" → give it a name → Continue
-   3. Once created: Project Settings (gear icon) → "Your apps"
-      → click </> (Web) → register app → copy the config below
-   4. In Firebase console:
-      - Authentication → Sign-in method → enable "Google"
-      - Firestore Database → Create database → Start in
-        production mode → choose a region near Kenya (e.g.
-        europe-west1) → Enable
-   5. Paste your values below replacing the placeholders
-   ═══════════════════════════════════════════════════════ */
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyCW6G3J3lBx64xb-wekpDcCSvTpqzVgsjI",
-  authDomain:        "cointrack4.firebaseapp.com",
-  projectId:         "cointrack4",
-  storageBucket:     "cointrack4.firebasestorage.app",
-  messagingSenderId: "33912410283",
-  appId:             "1:33912410283:web:019eb03985bdbe2ad167ee"
+// === PASTE YOUR CONFIG HERE ===
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-/* ── INIT FIREBASE ─────────────────────────────────────── */
-firebase.initializeApp(FIREBASE_CONFIG);
-const auth           = firebase.auth();
-const db             = firebase.firestore();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+let currentUser = null;
 
-/* ── CONSTANTS ─────────────────────────────────────────── */
-const CAT_ICONS = {
-  Food:          '🍽️',
-  Transport:     '🚌',
-  Bills:         '💡',
-  Health:        '🏥',
-  Entertainment: '🎉',
-  Clothing:      '👗',
-  Savings:       '🏦',
-  Airtime:       '📱',
-  Education:     '📚',
-  Other:         '📦',
-  Income:        '💵',
-};
-
-const CIRC = 2 * Math.PI * 38;
-
-/* ── STATE ─────────────────────────────────────────────── */
-let currentUser  = null;
+// Global State
 let transactions = [];
-let dailyBudget  = 0;
-let goals        = { inGoal: 0, outGoal: 0, saveGoal: 0 };
-let habits       = [];
-let histFilter   = 'all';
+let goals = { inGoal: 0, outGoal: 0, saveGoal: 0 };
+let habits = [];
+let dailyBudget = 0;
+let histFilter = 'all';
 let openDrillCat = null;
-let saveTimer    = null;
 
-/* ── DOM HELPERS ───────────────────────────────────────── */
-function el(id) { return document.getElementById(id); }
+const CAT_ICONS = {
+  'Food': '🍔', 'Transport': '🚗', 'Housing': '🏠', 'Bills': '🧾',
+  'Shopping': '🛍️', 'Entertainment': '🎬', 'Health': '💊', 'Savings': '💰'
+};
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ── FORMAT ────────────────────────────────────────────── */
-function fmt(n) {
-  return 'KSh ' + Math.round(n).toLocaleString('en-KE');
-}
+// Utilities
+const el = id => document.getElementById(id);
+const fmt = num => '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const escHtml = str => str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag] || tag));
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString('en-KE', {
-    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-  });
+function dateOffset(daysBack) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysBack);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function getMonthRange() {
-  const n    = new Date();
-  const from = new Date(n.getFullYear(), n.getMonth(), 1).toISOString().slice(0, 10);
-  const to   = new Date(n.getFullYear(), n.getMonth() + 1, 0).toISOString().slice(0, 10);
-  return [from, to];
-}
-
-function dateOffset(daysAgo) {
   const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+  const m0 = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  const m1 = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-31`;
+  return [m0, m1];
 }
 
-/* ── TOAST ─────────────────────────────────────────────── */
-let toastTimer;
-function toast(msg, type = '') {
-  const t = el('toast');
-  t.textContent = msg;
-  t.className   = 'toast show' + (type ? ' ' + type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+function todayLabel() {
+  return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function showToast(msg, type = 'green') {
+  const toast = el('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = `toast show ${type}`;
+  setTimeout(() => { toast.className = 'toast'; }, 3000);
 }
 
 /* ══════════════════════════════════════════════════════════
-   AUTH
+   FIREBASE AUTH & LISTENERS
    ═══════════════════════════════════════════════════════ */
-
-function signInWithGoogle() {
-  const btn = el('google-signin-btn');
-  btn.disabled    = true;
-  btn.textContent = 'Signing in…';
-
-  auth.signInWithPopup(googleProvider)
-    .catch(err => {
-      console.error('Auth error:', err);
-      const errEl = el('login-error');
-      errEl.textContent = err.code === 'auth/popup-blocked'
-        ? 'Popup was blocked. Please allow popups for this site.'
-        : 'Sign-in failed. Please try again.';
-      btn.disabled    = false;
-      btn.innerHTML   = `<svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
-    });
-}
-
-function handleSignOut() {
-  closeUserMenu();
-  auth.signOut().then(() => {
-    // Clear state
-    transactions = [];
-    dailyBudget  = 0;
-    goals        = { inGoal: 0, outGoal: 0, saveGoal: 0 };
-    habits       = [];
-    currentUser  = null;
-  });
-}
-
-/* Auth state listener — this is the app's main entry point */
-auth.onAuthStateChanged(async user => {
+onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
-    showLoadingScreen();
-    await loadFromCloud();
-    hideLoadingScreen();
-    updateUserUI(user);
-    initApp();
-    showAppShell();
+    listenToTransactions();
+    listenToSettings();
+    listenToHabits();
+    // After state is synced, UI will render via onSnapshot callbacks
   } else {
     currentUser = null;
-    showLoginScreen();
+    console.log("No user logged in. Add your auth UI flow here.");
   }
 });
 
-/* ── SCREEN HELPERS ────────────────────────────────────── */
-function showLoginScreen() {
-  el('login-screen').style.display  = 'flex';
-  el('loading-screen').style.display = 'none';
-  el('app-shell').style.display     = 'none';
-  // Reset sign-in button
-  const btn = el('google-signin-btn');
-  if (btn) {
-    btn.disabled  = false;
-    btn.innerHTML = `<svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
-  }
-  const errEl = el('login-error');
-  if (errEl) errEl.textContent = '';
+function listenToTransactions() {
+  const q = query(collection(db, `users/${currentUser.uid}/transactions`), orderBy("date", "desc"));
+  onSnapshot(q, (snapshot) => {
+    transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Re-render UI pieces relying on transactions
+    renderDash();
+    renderLog();
+    renderSpent();
+    renderHist();
+    renderGoalProgress();
+  });
 }
 
-function showLoadingScreen() {
-  el('login-screen').style.display  = 'none';
-  el('loading-screen').style.display = 'flex';
-  el('app-shell').style.display     = 'none';
+function listenToSettings() {
+  const settingsRef = doc(db, `users/${currentUser.uid}/settings`, 'config');
+  onSnapshot(settingsRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      goals = data.goals || { inGoal: 0, outGoal: 0, saveGoal: 0 };
+      dailyBudget = data.dailyBudget || 0;
+    }
+    renderDash();
+    renderGoalProgress();
+  });
 }
 
-function hideLoadingScreen() {
-  el('loading-screen').style.display = 'none';
-}
-
-function showAppShell() {
-  el('login-screen').style.display  = 'none';
-  el('loading-screen').style.display = 'none';
-  el('app-shell').style.display     = 'flex';
-}
-
-/* ── USER UI ───────────────────────────────────────────── */
-function updateUserUI(user) {
-  const photo    = el('user-photo');
-  const initials = el('user-initials');
-  const name     = user.displayName || 'User';
-  const email    = user.email || '';
-
-  if (user.photoURL) {
-    photo.src              = user.photoURL;
-    photo.style.display    = 'block';
-    initials.style.display = 'none';
-  } else {
-    photo.style.display    = 'none';
-    initials.textContent   = name.charAt(0).toUpperCase();
-    initials.style.display = 'block';
-  }
-
-  el('user-menu-name').textContent  = name;
-  el('user-menu-email').textContent = email;
-}
-
-function toggleUserMenu() {
-  const menu     = el('user-menu');
-  const backdrop = el('user-menu-backdrop');
-  const isOpen   = menu.style.display !== 'none';
-  if (isOpen) {
-    closeUserMenu();
-  } else {
-    menu.style.display     = 'block';
-    backdrop.style.display = 'block';
-  }
-}
-
-function closeUserMenu() {
-  el('user-menu').style.display     = 'none';
-  el('user-menu-backdrop').style.display = 'none';
+function listenToHabits() {
+  const q = collection(db, `users/${currentUser.uid}/habits`);
+  onSnapshot(q, (snapshot) => {
+    habits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderHabits();
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
-   CLOUD STORAGE (FIRESTORE)
+   FIREBASE MUTATION FUNCTIONS
    ═══════════════════════════════════════════════════════ */
-
-function getUserRef() {
-  return db.collection('users').doc(currentUser.uid);
-}
-
-async function loadFromCloud() {
-  try {
-    const doc = await getUserRef().get();
-    if (doc.exists) {
-      const data   = doc.data();
-      transactions = data.transactions || [];
-      dailyBudget  = data.dailyBudget  || 0;
-      goals        = data.goals        || { inGoal: 0, outGoal: 0, saveGoal: 0 };
-      habits       = data.habits       || defaultHabits();
-    } else {
-      // Brand-new user
-      resetState();
-    }
-    // Mirror to localStorage as a local cache
-    cacheLocally();
-  } catch (err) {
-    console.error('Cloud load failed, using local cache:', err);
-    loadFromLocalCache();
-  }
-}
-
-/* Debounced save — batches rapid changes into one write */
-function scheduleSave() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistToCloud, 1200);
-}
-
-async function persistToCloud() {
+async function deleteTx(firebaseId) {
   if (!currentUser) return;
   try {
-    await getUserRef().set({
-      transactions,
-      dailyBudget,
-      goals,
-      habits,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    cacheLocally();
-  } catch (err) {
-    console.error('Cloud save failed, saved locally:', err);
-    cacheLocally();
-    toast('⚠️ Saved locally — check internet connection', 'amber');
+    await deleteDoc(doc(db, `users/${currentUser.uid}/transactions`, firebaseId));
+    showToast('Transaction deleted', 'amber');
+    // If deleted from drill panel, re-render spent tab
+    drillCategory(''); 
+    renderSpent();
+  } catch (error) {
+    showToast('Error deleting transaction', 'red');
   }
 }
 
-/* Local cache (localStorage) as offline fallback */
-function cacheLocally() {
-  try {
-    localStorage.setItem('ct_transactions', JSON.stringify(transactions));
-    localStorage.setItem('ct_daily_budget', JSON.stringify(dailyBudget));
-    localStorage.setItem('ct_goals',        JSON.stringify(goals));
-    localStorage.setItem('ct_habits',       JSON.stringify(habits));
-  } catch (e) { /* quota exceeded — ignore */ }
-}
-
-function loadFromLocalCache() {
-  try {
-    transactions = JSON.parse(localStorage.getItem('ct_transactions')) || [];
-    dailyBudget  = JSON.parse(localStorage.getItem('ct_daily_budget')) || 0;
-    goals        = JSON.parse(localStorage.getItem('ct_goals'))        || { inGoal: 0, outGoal: 0, saveGoal: 0 };
-    habits       = JSON.parse(localStorage.getItem('ct_habits'))       || defaultHabits();
-  } catch (e) {
-    resetState();
+async function toggleHabit(firebaseId) {
+  if (!currentUser) return;
+  const habit = habits.find(h => h.id === firebaseId);
+  if (!habit) return;
+  
+  const today = todayStr();
+  const doneToday = habit.lastDone === today;
+  
+  let newStreak = habit.streak || 0;
+  let newLastDone = habit.lastDone;
+  
+  if (doneToday) {
+    newStreak = Math.max(0, newStreak - 1);
+    newLastDone = ''; // simplify undo logic
+  } else {
+    newStreak++;
+    newLastDone = today;
   }
-}
-
-function resetState() {
-  transactions = [];
-  dailyBudget  = 0;
-  goals        = { inGoal: 0, outGoal: 0, saveGoal: 0 };
-  habits       = defaultHabits();
-}
-
-/* Save wrappers — all call scheduleSave() now */
-function saveTxs()    { scheduleSave(); }
-function saveBudget() { scheduleSave(); }
-function saveGoalsFn(){ scheduleSave(); }
-function saveHabits() { scheduleSave(); }
-
-/* ══════════════════════════════════════════════════════════
-   DEFAULT HABITS
-   ═══════════════════════════════════════════════════════ */
-function defaultHabits() {
-  return [
-    { id: 1, icon: '📝', name: 'Log every transaction',         streak: 0, lastDone: '' },
-    { id: 2, icon: '🚫', name: 'No impulse purchases',          streak: 0, lastDone: '' },
-    { id: 3, icon: '💰', name: 'Review my balance daily',       streak: 0, lastDone: '' },
-    { id: 4, icon: '🥗', name: 'Cook at home (save food money)', streak: 0, lastDone: '' },
-  ];
-}
-
-/* ══════════════════════════════════════════════════════════
-   PAGE NAVIGATION
-   ═══════════════════════════════════════════════════════ */
-function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => {
-    b.classList.remove('active');
-    b.setAttribute('aria-selected', 'false');
+  
+  await updateDoc(doc(db, `users/${currentUser.uid}/habits`, firebaseId), {
+    streak: newStreak,
+    lastDone: newLastDone
   });
-  el('page-' + name).classList.add('active');
-  btn.classList.add('active');
-  btn.setAttribute('aria-selected', 'true');
-
-  if (name === 'spent')  renderSpent();
-  if (name === 'hist')   renderHist();
-  if (name === 'goals')  { renderGoalProgress(); renderHabits(); }
 }
 
-/* ══════════════════════════════════════════════════════════
-   TRANSACTIONS
-   ═══════════════════════════════════════════════════════ */
-function addTx(dir) {
-  if (dir === 'in') {
-    const amt  = parseFloat(el('in-amt').value);
-    const desc = el('in-desc').value.trim();
-    const date = el('in-date').value || todayStr();
-    if (!amt || amt <= 0) { toast('Enter a valid amount', 'red'); return; }
-    if (!desc)            { toast('Add a description', 'red'); return; }
-    transactions.unshift({ id: Date.now(), dir: 'in', amt, desc, date, cat: 'Income' });
-    el('in-amt').value  = '';
-    el('in-desc').value = '';
-    toast('✓ Money in recorded', 'green');
-  } else {
-    const amt  = parseFloat(el('out-amt').value);
-    const desc = el('out-desc').value.trim();
-    const date = el('out-date').value || todayStr();
-    const cat  = el('out-cat').value;
-    if (!amt || amt <= 0) { toast('Enter a valid amount', 'red'); return; }
-    if (!desc)            { toast('Describe what you bought', 'red'); return; }
-    transactions.unshift({ id: Date.now(), dir: 'out', amt, desc, date, cat });
-    el('out-amt').value  = '';
-    el('out-desc').value = '';
-    toast('✓ Expense recorded', 'green');
-  }
-
-  saveTxs();
-  renderDash();
-  renderLog();
-}
-
-function deleteTx(id) {
-  transactions = transactions.filter(t => t.id !== id);
-  saveTxs();
-  renderDash();
-  renderLog();
-  renderHist();
-  renderSpent();
-  toast('Transaction deleted');
-}
-
-/* ══════════════════════════════════════════════════════════
-   DAILY BUDGET
-   ═══════════════════════════════════════════════════════ */
-function saveDailyBudget() {
-  const v = parseFloat(el('daily-budget-inp').value);
-  if (!v || v <= 0) { toast('Enter a valid budget amount', 'red'); return; }
-  dailyBudget = v;
-  saveBudget();
-  renderDash();
-  toast('Daily budget saved!', 'green');
-}
-
-/* ══════════════════════════════════════════════════════════
-   GOALS
-   ═══════════════════════════════════════════════════════ */
-function saveGoals() {
-  goals.inGoal   = parseFloat(el('goal-in').value)   || 0;
-  goals.outGoal  = parseFloat(el('goal-out').value)  || 0;
-  goals.saveGoal = parseFloat(el('goal-save').value) || 0;
-  saveGoalsFn();
-  renderDash();
-  renderGoalProgress();
-  toast('Goals saved!', 'green');
-}
-
-/* ══════════════════════════════════════════════════════════
-   HABITS
-   ═══════════════════════════════════════════════════════ */
-function addHabit() {
-  const name = el('habit-name').value.trim();
-  const icon = el('habit-icon').value.trim() || '⭐';
-  if (!name) { toast('Enter a habit name', 'red'); return; }
-  habits.push({ id: Date.now(), icon, name, streak: 0, lastDone: '' });
-  el('habit-name').value = '';
-  el('habit-icon').value = '';
-  saveHabits();
-  renderHabits();
-  toast('Habit added!', 'green');
-}
-
-function toggleHabit(id) {
-  const h = habits.find(x => x.id === id);
-  if (!h) return;
-  const t  = todayStr();
-  const yd = dateOffset(1);
-  if (h.lastDone === t) {
-    h.streak   = Math.max(0, h.streak - 1);
-    h.lastDone = yd;
-  } else {
-    h.streak   = h.lastDone === yd ? h.streak + 1 : 1;
-    h.lastDone = t;
-  }
-  saveHabits();
-  renderHabits();
-}
-
-function deleteHabit(id) {
-  habits = habits.filter(h => h.id !== id);
-  saveHabits();
-  renderHabits();
-  toast('Habit removed');
+async function deleteHabit(firebaseId) {
+  if (!currentUser) return;
+  await deleteDoc(doc(db, `users/${currentUser.uid}/habits`, firebaseId));
+  showToast('Habit deleted', 'amber');
 }
 
 /* ══════════════════════════════════════════════════════════
    RENDER: DASHBOARD
    ═══════════════════════════════════════════════════════ */
 function renderDash() {
-  const today     = todayStr();
-  const [m0, m1]  = getMonthRange();
+  const today = todayStr();
+  const [m0, m1] = getMonthRange();
+  
+  const tIn  = transactions.filter(t => t.dir === 'in' && t.date === today).reduce((s,t) => s + t.amt, 0);
+  const tOut = transactions.filter(t => t.dir === 'out' && t.date === today).reduce((s,t) => s + t.amt, 0);
+  const mIn  = transactions.filter(t => t.dir === 'in' && t.date >= m0 && t.date <= m1).reduce((s,t) => s + t.amt, 0);
+  const mOut = transactions.filter(t => t.dir === 'out' && t.date >= m0 && t.date <= m1).reduce((s,t) => s + t.amt, 0);
+  const bal  = transactions.filter(t => t.dir === 'in').reduce((s,t) => s + t.amt, 0) - 
+               transactions.filter(t => t.dir === 'out').reduce((s,t) => s + t.amt, 0);
 
-  const allIn  = transactions.filter(t => t.dir === 'in').reduce((s,t) => s + t.amt, 0);
-  const allOut = transactions.filter(t => t.dir === 'out').reduce((s,t) => s + t.amt, 0);
-  const bal    = allIn - allOut;
-
-  const mIn  = transactions.filter(t => t.dir === 'in'  && t.date >= m0 && t.date <= m1).reduce((s,t) => s+t.amt, 0);
-  const mOut = transactions.filter(t => t.dir === 'out' && t.date >= m0 && t.date <= m1).reduce((s,t) => s+t.amt, 0);
-  const tOut = transactions.filter(t => t.dir === 'out' && t.date === today).reduce((s,t) => s+t.amt, 0);
-
-  const hb = el('header-balance');
-  hb.textContent = fmt(bal);
-  hb.className   = 'header-bal-num' + (bal < 0 ? ' neg' : '');
-
-  const db_ = el('dash-balance');
-  db_.textContent = fmt(bal);
-  db_.className   = 'balance-amount' + (bal > 0 ? '' : bal < 0 ? ' neg' : ' zero');
-  el('dash-balance-sub').textContent = transactions.length
-    ? `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''} tracked`
-    : 'Log your first transaction below';
-
-  el('dash-total-in').textContent  = fmt(allIn);
-  el('dash-total-out').textContent = fmt(allOut);
-  el('dash-month-in').textContent  = fmt(mIn);
-  el('dash-month-out').textContent = fmt(mOut);
-
-  renderBudgetRing(tOut);
-  renderWeekBars();
-  renderDashGoals(mIn, mOut, bal);
-  renderInsights(tOut, mIn, mOut, bal);
-}
-
-function renderBudgetRing(todaySpent) {
-  el('ring-spent').textContent = fmt(todaySpent);
-
-  if (dailyBudget > 0) {
-    const pct    = Math.min(todaySpent / dailyBudget, 1);
-    const colour = pct >= 1 ? '#ff5252' : pct >= 0.8 ? '#ffab40' : '#00e676';
-    el('ring-progress').setAttribute('stroke-dasharray', `${pct * CIRC} ${CIRC}`);
-    el('ring-progress').setAttribute('stroke', colour);
-
-    const pctNum = Math.round(pct * 100);
-    el('ring-pct').textContent = pctNum + '%';
-    el('ring-pct').style.color = colour;
-
-    const rem    = dailyBudget - todaySpent;
-    const remain = el('ring-remain');
-    if (rem < 0) {
-      remain.textContent = fmt(Math.abs(rem)) + ' over budget!';
-      remain.className   = 'ring-info-remain over';
-    } else if (pct >= 0.8) {
-      remain.textContent = fmt(rem) + ' remaining — be careful';
-      remain.className   = 'ring-info-remain warn';
-    } else {
-      remain.textContent = fmt(rem) + ' remaining';
-      remain.className   = 'ring-info-remain ok';
-    }
-    el('ring-budget-label').textContent = 'Budget: ' + fmt(dailyBudget);
-  } else {
-    el('ring-progress').setAttribute('stroke-dasharray', '0 239');
-    el('ring-pct').textContent      = '–';
-    el('ring-pct').style.color      = '';
-    el('ring-remain').textContent   = 'Set a daily budget below';
-    el('ring-remain').className     = 'ring-info-remain';
-    el('ring-budget-label').textContent = '';
+  const balEl = el('dash-bal');
+  if (balEl) {
+    balEl.textContent = fmt(bal);
+    balEl.className = `balance-amount ${bal < 0 ? 'neg' : bal === 0 ? 'zero' : ''}`;
   }
+
+  if (el('dash-in'))  el('dash-in').textContent  = fmt(mIn);
+  if (el('dash-out')) el('dash-out').textContent = fmt(mOut);
+  if (el('dash-today-spent')) el('dash-today-spent').textContent = fmt(tOut);
+  
+  if (el('dash-today-remain') && el('dash-ring-pct') && el('dash-ring-progress')) {
+    if (dailyBudget > 0) {
+      const remain = dailyBudget - tOut;
+      const pct = Math.min(tOut / dailyBudget, 1);
+      const strokeDash = pct * 251.2; 
+      
+      const rEl = el('dash-today-remain');
+      rEl.textContent = remain < 0 ? `${fmt(Math.abs(remain))} over` : `${fmt(remain)} left`;
+      rEl.className = `ring-info-remain ${remain < 0 ? 'over' : remain <= dailyBudget * 0.2 ? 'warn' : 'ok'}`;
+      
+      el('dash-ring-pct').textContent = `${Math.round(pct * 100)}%`;
+      el('dash-ring-progress').style.strokeDasharray = `${strokeDash}, 251.2`;
+      el('dash-ring-progress').style.stroke = remain < 0 ? 'var(--text3)' : remain <= dailyBudget * 0.2 ? 'var(--text2)' : 'var(--white)';
+    } else {
+      el('dash-today-remain').textContent = 'No budget set';
+      el('dash-ring-pct').textContent = '0%';
+      el('dash-ring-progress').style.strokeDasharray = '0, 251.2';
+    }
+  }
+
+  if (el('week-grid')) renderWeekBars();
+  if (el('dash-goals-content')) renderDashGoals(mIn, mOut);
+  if (el('dash-insights')) renderInsights(tOut, mIn, mOut, bal);
 }
 
 function renderWeekBars() {
@@ -548,23 +241,23 @@ function renderWeekBars() {
 function renderDashGoals(mIn, mOut) {
   const gc = el('dash-goals-content');
   if (!goals.inGoal && !goals.outGoal) {
-    gc.innerHTML = '<p style="font-size:12px;color:var(--text3)">Set monthly goals in the Goals tab →</p>';
+    gc.innerHTML = '<p style="font-size:13px;color:var(--text3)">Set monthly goals in the Goals tab →</p>';
     return;
   }
   let html = '';
   if (goals.inGoal)  html += buildProgBar('Monthly Income',   mIn,  goals.inGoal,  false);
-  if (goals.outGoal) html += buildProgBar('Monthly Spending',  mOut, goals.outGoal, true);
+  if (goals.outGoal) html += buildProgBar('Monthly Spending', mOut, goals.outGoal, true);
   gc.innerHTML = html;
 }
 
 function buildProgBar(label, current, goal, invert) {
-  const pct   = Math.min(current / goal, 1);
-  const pctW  = Math.round(pct * 100);
-  const over  = invert ? pct >= 1 : false;
-  const warn  = invert ? (pct >= 0.8 && pct < 1) : (pct >= 0.5 && pct < 1);
-  const ok    = invert ? pct < 0.8 : pct >= 1;
-  const cls   = over ? 'red' : warn ? 'amber' : ok ? 'green' : 'blue';
-  const note  = over
+  const pct  = Math.min(current / goal, 1);
+  const pctW = Math.round(pct * 100);
+  const over = invert ? pct >= 1 : false;
+  const warn = invert ? (pct >= 0.8 && pct < 1) : (pct >= 0.5 && pct < 1);
+  const ok   = invert ? pct < 0.8 : pct >= 1;
+  const cls  = over ? 'red' : warn ? 'amber' : ok ? 'green' : 'blue';
+  const note = over
     ? 'Over limit!'
     : warn ? 'Getting close'
     : `${pctW}% — ${fmt(Math.abs(goal - current))} ${current < goal ? 'to go' : 'achieved'}`;
@@ -638,6 +331,8 @@ function renderInsights(tOut, mIn, mOut, bal) {
 function renderLog() {
   const recent = transactions.slice(0, 7);
   const recEl  = el('log-recent');
+  if (!recEl) return;
+  
   if (!recent.length) {
     recEl.innerHTML = `
       <div class="empty-state">
@@ -651,9 +346,10 @@ function renderLog() {
 }
 
 function txItemHTML(t, showDel = false) {
-  const icon   = t.dir === 'in' ? '💵' : (CAT_ICONS[t.cat] || '💸');
+  const icon   = t.dir === 'in' ? '💵' : (CAT_ICONS[t.cat] || '📦');
+  // Pass string ID wrapped in single quotes for Firebase string IDs
   const delBtn = showDel
-    ? `<button class="tx-del" onclick="deleteTx(${t.id})" aria-label="Delete transaction">🗑️</button>`
+    ? `<button class="tx-del" onclick="deleteTx('${t.id}')" aria-label="Delete transaction">🗑️</button>`
     : '';
   return `
     <div class="tx-item ${t.dir}">
@@ -674,6 +370,7 @@ function txItemHTML(t, showDel = false) {
    RENDER: SPENT TAB
    ═══════════════════════════════════════════════════════ */
 function renderSpent() {
+  if (!el('sp-metrics')) return;
   const from = el('sp-from').value || getMonthRange()[0];
   const to   = el('sp-to').value   || getMonthRange()[1];
 
@@ -725,8 +422,16 @@ function renderSpent() {
 
 function drillCategory(cat) {
   const drillEl = el('drill-panel');
-  const from    = el('sp-from').value || getMonthRange()[0];
-  const to      = el('sp-to').value   || getMonthRange()[1];
+  if (!drillEl) return;
+  
+  if (cat === '') {
+    drillEl.classList.remove('open');
+    openDrillCat = null;
+    return;
+  }
+
+  const from = el('sp-from').value || getMonthRange()[0];
+  const to   = el('sp-to').value   || getMonthRange()[1];
 
   if (openDrillCat === cat && drillEl.classList.contains('open')) {
     drillEl.classList.remove('open');
@@ -742,14 +447,14 @@ function drillCategory(cat) {
   el('drill-title').textContent = `${CAT_ICONS[cat] || '📦'} ${cat} — ${items.length} purchase${items.length !== 1 ? 's' : ''}`;
   el('drill-list').innerHTML = items.length
     ? items.map(t => `
-        <div class="tx-item out" style="margin-bottom:6px">
+        <div class="tx-item out" style="margin-bottom:8px">
           <div class="tx-icon out">${CAT_ICONS[t.cat]||'📦'}</div>
           <div class="tx-body">
             <div class="tx-desc">${escHtml(t.desc)}</div>
             <div class="tx-meta">${t.date}</div>
           </div>
           <div class="tx-amount out">${fmt(t.amt)}</div>
-          <button class="tx-del" onclick="deleteTx(${t.id});drillCategory('');renderSpent();" aria-label="Delete">🗑️</button>
+          <button class="tx-del" onclick="deleteTx('${t.id}')" aria-label="Delete">🗑️</button>
         </div>`).join('')
     : '<p style="font-size:13px;color:var(--text3);text-align:center;padding:12px">No items found</p>';
 
@@ -760,6 +465,7 @@ function drillCategory(cat) {
    RENDER: HISTORY TAB
    ═══════════════════════════════════════════════════════ */
 function renderHist() {
+  if (!el('h-from')) return;
   const from = el('h-from').value || getMonthRange()[0];
   const to   = el('h-to').value   || todayStr();
   let filtered = transactions.filter(t => t.date >= from && t.date <= to);
@@ -808,6 +514,7 @@ function setHistFilter(filter, btn) {
    RENDER: GOALS & HABITS
    ═══════════════════════════════════════════════════════ */
 function renderGoalProgress() {
+  if (!el('goal-in-progress')) return;
   const [m0, m1] = getMonthRange();
   const mIn   = transactions.filter(t => t.dir === 'in'  && t.date >= m0 && t.date <= m1).reduce((s,t) => s+t.amt, 0);
   const mOut  = transactions.filter(t => t.dir === 'out' && t.date >= m0 && t.date <= m1).reduce((s,t) => s+t.amt, 0);
@@ -815,6 +522,7 @@ function renderGoalProgress() {
 
   function renderProg(elId, cur, goal, invert) {
     const progEl = el(elId);
+    if (!progEl) return;
     if (!goal) { progEl.innerHTML = ''; return; }
     progEl.innerHTML = buildProgBar('Progress', cur, goal, invert);
   }
@@ -825,6 +533,7 @@ function renderGoalProgress() {
 
 function renderHabits() {
   const listEl = el('habits-list');
+  if (!listEl) return;
   if (!habits.length) {
     listEl.innerHTML = `
       <div class="empty-state">
@@ -845,15 +554,15 @@ function renderHabits() {
           <div class="habit-desc">${done ? '✓ Done today!' : 'Not done yet today'}</div>
         </div>
         <div class="habit-streak">
-          <span class="habit-streak-num">${h.streak}</span>
+          <span class="habit-streak-num">${h.streak || 0}</span>
           <span class="habit-streak-label">streak</span>
         </div>
         <button class="habit-check ${done ? 'done' : ''}"
-          onclick="toggleHabit(${h.id})"
+          onclick="toggleHabit('${h.id}')"
           aria-label="${done ? 'Mark incomplete' : 'Mark done for today'}">
           ${done ? '✓' : ''}
         </button>
-        <button class="habit-del" onclick="deleteHabit(${h.id})" aria-label="Delete habit">🗑️</button>
+        <button class="habit-del" onclick="deleteHabit('${h.id}')" aria-label="Delete habit">🗑️</button>
       </div>`;
   }).join('');
 }
@@ -865,7 +574,7 @@ let deferredInstall;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstall = e;
-  el('install-banner').style.display = 'flex';
+  if(el('install-banner')) el('install-banner').style.display = 'flex';
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -891,13 +600,13 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   INIT (called after login + data load)
+   INIT
    ═══════════════════════════════════════════════════════ */
 function initApp() {
   const today    = todayStr();
   const [m0, m1] = getMonthRange();
 
-  el('header-date').textContent = todayLabel();
+  if (el('header-date')) el('header-date').textContent = todayLabel();
 
   ['in-date', 'out-date'].forEach(id => {
     const input = el(id);
@@ -910,11 +619,19 @@ function initApp() {
   const hFrom = el('h-from'), hTo = el('h-to');
   if (hFrom && !hFrom.value) { hFrom.value = m0; hTo.value = today; }
 
-  if (goals.inGoal)   el('goal-in').value   = goals.inGoal;
-  if (goals.outGoal)  el('goal-out').value  = goals.outGoal;
-  if (goals.saveGoal) el('goal-save').value = goals.saveGoal;
-  if (dailyBudget)    el('daily-budget-inp').value = dailyBudget;
-
-  renderDash();
-  renderLog();
+  if (goals.inGoal && el('goal-in'))   el('goal-in').value   = goals.inGoal;
+  if (goals.outGoal && el('goal-out')) el('goal-out').value  = goals.outGoal;
+  if (goals.saveGoal && el('goal-save')) el('goal-save').value = goals.saveGoal;
+  if (dailyBudget && el('daily-budget-inp')) el('daily-budget-inp').value = dailyBudget;
 }
+
+// Bind ES Module functions to window so HTML inline handlers can reach them
+window.deleteTx = deleteTx;
+window.toggleHabit = toggleHabit;
+window.deleteHabit = deleteHabit;
+window.drillCategory = drillCategory;
+window.setHistFilter = setHistFilter;
+window.renderSpent = renderSpent;
+window.renderHist = renderHist;
+
+document.addEventListener('DOMContentLoaded', initApp);
