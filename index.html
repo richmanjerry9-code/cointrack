@@ -143,6 +143,8 @@ button{cursor:pointer}
 .ring-info-remain{font-size:12px;font-weight:600}
 .ring-info-remain.ok{color:var(--green)}.ring-info-remain.warn{color:var(--amber)}.ring-info-remain.over{color:var(--red)}
 .ring-info-budget{font-size:11px;color:var(--txt3);margin-top:2px}
+/* Daily budget source note */
+.ring-source-note{font-size:11px;color:var(--txt3);margin-top:6px;padding:6px 10px;background:rgba(255,171,64,.07);border:1px solid rgba(255,171,64,.15);border-radius:8px;line-height:1.4}
 .budget-edit-row{display:flex;align-items:flex-end;gap:10px}
 .budget-edit-field{flex:1}
 .budget-edit-field label{display:block;font-size:11px;color:var(--txt3);font-weight:600;margin-bottom:5px}
@@ -257,6 +259,34 @@ select option{background:var(--surface);color:var(--txt)}
 .hist-stat-v{display:block;font-family:var(--mono);font-size:13px;font-weight:500;margin-bottom:2px}
 .hist-stat-l{font-size:9px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase}
 
+/* ── HISTORY DAY GROUPS ───────────────────────────── */
+.hist-day-group{margin-bottom:14px}
+.hist-day-header{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px;cursor:pointer;user-select:none;transition:background .15s}
+.hist-day-header:hover{background:var(--card)}
+.hist-day-label{font-size:12px;font-weight:700;color:var(--txt);font-family:var(--mono)}
+.hist-day-right{display:flex;align-items:center;gap:8px}
+.hist-day-net{font-family:var(--mono);font-size:12px;font-weight:600}
+.hist-day-net.pos{color:var(--green)}.hist-day-net.neg{color:var(--red)}
+.hist-add-btn{background:var(--green-dim);border:1px solid rgba(0,230,118,.3);color:var(--green);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.hist-add-btn:hover{background:rgba(0,230,118,.2)}
+
+/* ── ADD TO DAY MODAL ─────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;animation:fadeOverlay .2s ease}
+@keyframes fadeOverlay{from{opacity:0}to{opacity:1}}
+.modal-sheet{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:20px 16px 32px;animation:slideUp .25s cubic-bezier(.4,0,.2,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+.modal-title{font-size:16px;font-weight:700;color:var(--txt);margin-bottom:4px}
+.modal-date-badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--green);background:var(--green-dim);border:1px solid rgba(0,230,118,.2);border-radius:20px;padding:3px 10px;margin-bottom:16px}
+.modal-tabs{display:flex;gap:6px;margin-bottom:16px}
+.modal-tab{flex:1;padding:9px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card);color:var(--txt2);font-size:13px;font-weight:700;transition:all .2s}
+.modal-tab.active-in{background:var(--green-dim);border-color:rgba(0,230,118,.4);color:var(--green)}
+.modal-tab.active-out{background:var(--red-dim);border-color:rgba(255,68,68,.4);color:var(--red)}
+.modal-actions{display:flex;gap:8px;margin-top:4px}
+.modal-cancel{flex:1;padding:12px;border:1px solid var(--border);border-radius:var(--rs);background:transparent;color:var(--txt2);font-size:14px;font-weight:600}
+.modal-save{flex:2;padding:12px;border:none;border-radius:var(--rs);background:var(--green);color:#000;font-size:14px;font-weight:700}
+.modal-save-out{background:var(--red)!important;color:#fff!important}
+
 /* ── GOALS ────────────────────────────────────────── */
 .goal-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
 .goal-card-dark{border-color:var(--border2)}
@@ -322,6 +352,50 @@ select option{background:var(--surface);color:var(--txt)}
     <div class="loading-logo">Coin<span>Track</span></div>
     <div class="loading-spinner"></div>
     <div class="loading-text">Loading your data…</div>
+  </div>
+</div>
+
+<!-- ADD TO PAST DAY MODAL -->
+<div id="day-modal" style="display:none">
+  <div class="modal-overlay" onclick="closeDayModal(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Add transaction</div>
+      <div class="modal-date-badge" id="modal-date-badge">📅 —</div>
+      <div class="modal-tabs">
+        <button class="modal-tab active-in" id="modal-tab-in" onclick="setModalDir('in')">💵 Money In</button>
+        <button class="modal-tab" id="modal-tab-out" onclick="setModalDir('out')">➖ Money Out</button>
+      </div>
+      <div class="form-group">
+        <label for="modal-amt">Amount (KSh)</label>
+        <input type="number" id="modal-amt" placeholder="e.g. 1500" inputmode="numeric" min="1">
+      </div>
+      <div class="form-group">
+        <label for="modal-desc">Description</label>
+        <input type="text" id="modal-desc" placeholder="What was this for?">
+      </div>
+      <div class="form-group" id="modal-cat-group">
+        <label for="modal-cat">Category</label>
+        <select id="modal-cat">
+          <option value="Food">🍔 Food &amp; Groceries</option>
+          <option value="Transport">🚗 Transport</option>
+          <option value="Bills">🧾 Bills &amp; Utilities</option>
+          <option value="Health">💊 Health</option>
+          <option value="Entertainment">🎬 Entertainment</option>
+          <option value="Clothing">👗 Clothing</option>
+          <option value="Savings">💰 Savings / Transfer</option>
+          <option value="Airtime">📱 Airtime &amp; Data</option>
+          <option value="Education">📚 Education</option>
+          <option value="Shopping">🛍️ Shopping</option>
+          <option value="Housing">🏠 Housing / Rent</option>
+          <option value="Other">📦 Other</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeDayModal()">Cancel</button>
+        <button class="modal-save" id="modal-save-btn" onclick="saveModalTx()">Save</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -400,14 +474,15 @@ select option{background:var(--surface);color:var(--txt)}
           <div class="ring-info">
             <div class="ring-info-title">Spent today</div>
             <div class="ring-info-spent" id="ring-spent">KSh 0.00</div>
-            <div class="ring-info-remain" id="ring-remain">Set a budget below</div>
+            <div class="ring-info-remain" id="ring-remain">Set a monthly limit in Goals →</div>
             <div class="ring-info-budget" id="ring-budget-label"></div>
           </div>
         </div>
-        <div class="budget-edit-row">
+        <div id="ring-source-note" class="ring-source-note" style="display:none"></div>
+        <div class="budget-edit-row" style="margin-top:10px">
           <div class="budget-edit-field">
-            <label for="daily-budget-inp">Daily budget (KSh)</label>
-            <input type="number" id="daily-budget-inp" placeholder="e.g. 1500" inputmode="numeric" min="1" style="width:100%;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt);font-size:14px;outline:none;transition:border-color .2s">
+            <label for="daily-budget-inp">Override daily budget (KSh) — optional</label>
+            <input type="number" id="daily-budget-inp" placeholder="Leave blank to use monthly ÷ 30" inputmode="numeric" min="1" style="width:100%;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt);font-size:14px;outline:none;transition:border-color .2s">
           </div>
           <button class="btn btn-black btn-sm" onclick="saveDailyBudget()">Set</button>
         </div>
@@ -493,6 +568,7 @@ select option{background:var(--surface);color:var(--txt)}
     <!-- HISTORY -->
     <section class="page" id="page-hist">
       <div class="section-title"><span class="dot dot-black"></span>Full history</div>
+      <p class="section-view-indicator" style="margin-bottom:10px">💡 Tap any day header to add a missed transaction for that date.</p>
       <div class="date-filter-row">
         <div class="form-group" style="margin:0"><label for="h-from">From</label><input type="date" id="h-from"></div>
         <div class="form-group" style="margin:0"><label for="h-to">To</label><input type="date" id="h-to"></div>
@@ -524,6 +600,7 @@ select option{background:var(--surface);color:var(--txt)}
       <div class="goal-card goal-card-dark">
         <div class="card-title card-title-dark">💸 Max monthly spending limit</div>
         <div class="form-group"><label for="goal-out">Max I should spend per month (KSh)</label><input type="number" id="goal-out" placeholder="e.g. 40000" inputmode="numeric"></div>
+        <div class="ring-source-note" style="margin-top:-4px;margin-bottom:10px">📅 Your daily budget ring on the dashboard is automatically calculated as this ÷ 30. You can also set a manual override on the dashboard.</div>
         <div id="goal-out-progress"></div>
       </div>
       <div class="goal-card goal-card-dark">
@@ -582,6 +659,7 @@ const auth = firebase.auth();
 db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Persistence:',e.code));
 
 let currentUser=null,transactions=[],goals={inGoal:0,outGoal:0,saveGoal:0},habits=[],dailyBudget=0,histFilter='all',openDrillCat=null;
+let modalDir='in', modalTargetDate='';
 
 const CAT_ICONS={Food:'🍔',Transport:'🚗',Housing:'🏠',Bills:'🧾',Shopping:'🛍️',Entertainment:'🎬',Health:'💊',Savings:'💰',Airtime:'📱',Education:'📚',Clothing:'👗',Other:'📦'};
 const el=id=>document.getElementById(id);
@@ -592,10 +670,18 @@ function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.get
 function dateOffset(n){const d=new Date();d.setDate(d.getDate()-n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function getMonthRange(){const d=new Date(),m=String(d.getMonth()+1).padStart(2,'0');return [`${d.getFullYear()}-${m}-01`,`${d.getFullYear()}-${m}-31`];}
 function todayLabel(){return new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});}
+function daysInCurrentMonth(){const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();}
+
+/* Compute effective daily budget: manual override > monthly limit / days */
+function getEffectiveDailyBudget(){
+  if(dailyBudget>0)return {amount:dailyBudget,source:'manual'};
+  if(goals.outGoal>0){const days=daysInCurrentMonth();return {amount:goals.outGoal/days,source:'monthly'};}
+  return {amount:0,source:'none'};
+}
 
 function showToast(msg,type='green'){const t=el('toast');if(!t)return;t.textContent=msg;t.className=`toast show ${type}`;setTimeout(()=>{t.className='toast';},3000);}
 
-/* AUTH */
+/* ── AUTH ─────────────────────────────────────────── */
 function signInWithGoogle(){
   const provider=new firebase.auth.GoogleAuthProvider();
   el('login-error').textContent='';
@@ -637,7 +723,7 @@ function setupUserUI(user){
 function toggleUserMenu(){const m=el('user-menu'),b=el('user-menu-backdrop'),open=m.style.display!=='none';m.style.display=open?'none':'block';b.style.display=open?'none':'block';}
 function closeUserMenu(){el('user-menu').style.display='none';el('user-menu-backdrop').style.display='none';}
 
-/* FIRESTORE */
+/* ── FIRESTORE ────────────────────────────────────── */
 function listenToTransactions(){
   db.collection(`users/${currentUser.uid}/transactions`).orderBy('date','desc').onSnapshot(snap=>{
     transactions=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -661,7 +747,7 @@ function listenToHabits(){
   db.collection(`users/${currentUser.uid}/habits`).onSnapshot(snap=>{habits=snap.docs.map(d=>({id:d.id,...d.data()}));renderHabits();});
 }
 
-/* MUTATIONS */
+/* ── MUTATIONS ────────────────────────────────────── */
 async function addTx(dir){
   if(!currentUser)return;
   const amtEl=el(dir==='in'?'in-amt':'out-amt'),descEl=el(dir==='in'?'in-desc':'out-desc'),dateEl=el(dir==='in'?'in-date':'out-date'),catEl=el('out-cat');
@@ -676,25 +762,36 @@ async function addTx(dir){
     showPage('dash',document.querySelector('.nav-btn'));
   }catch(e){showToast('Error saving: '+e.message,'red');}
 }
+
 async function deleteTx(firebaseId){
   if(!currentUser)return;
   try{await db.doc(`users/${currentUser.uid}/transactions/${firebaseId}`).delete();showToast('Deleted','amber');drillCategory('');}
   catch(e){showToast('Error deleting','red');}
 }
+
 async function saveDailyBudget(){
   if(!currentUser)return;
-  const val=parseFloat(el('daily-budget-inp').value);
-  if(!val||val<=0){showToast('Enter a valid budget','amber');return;}
+  const raw=el('daily-budget-inp').value;
+  if(!raw||parseFloat(raw)<=0){
+    // Clear manual override — fall back to monthly
+    dailyBudget=0;
+    await db.doc(`users/${currentUser.uid}/settings/config`).set({dailyBudget:0},{merge:true});
+    showToast('Override cleared — using monthly limit ÷ 30');
+    renderDash();return;
+  }
+  const val=parseFloat(raw);
   dailyBudget=val;
   await db.doc(`users/${currentUser.uid}/settings/config`).set({dailyBudget},{merge:true});
-  showToast('Daily budget saved ✓');renderDash();
+  showToast('Daily budget override saved ✓');renderDash();
 }
+
 async function saveGoals(){
   if(!currentUser)return;
   goals={inGoal:parseFloat(el('goal-in').value)||0,outGoal:parseFloat(el('goal-out').value)||0,saveGoal:parseFloat(el('goal-save').value)||0};
   await db.doc(`users/${currentUser.uid}/settings/config`).set({goals},{merge:true});
   showToast('Goals saved ✓');renderGoalProgress();renderDash();
 }
+
 async function addHabit(){
   if(!currentUser)return;
   const name=el('habit-name').value.trim(),icon=el('habit-icon').value.trim()||'🎯';
@@ -714,7 +811,53 @@ async function deleteHabit(firebaseId){
   await db.doc(`users/${currentUser.uid}/habits/${firebaseId}`).delete();showToast('Habit deleted','amber');
 }
 
-/* NAV */
+/* ── DAY MODAL ────────────────────────────────────── */
+function openDayModal(dateStr){
+  modalTargetDate=dateStr;
+  modalDir='in';
+  el('modal-amt').value='';
+  el('modal-desc').value='';
+  el('modal-cat').value='Food';
+  el('modal-cat-group').style.display='none';
+  el('modal-tab-in').className='modal-tab active-in';
+  el('modal-tab-out').className='modal-tab';
+  el('modal-save-btn').className='modal-save';
+  // Format date nicely
+  const d=new Date(dateStr+'T00:00:00');
+  const label=d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  el('modal-date-badge').textContent='📅 '+label;
+  el('day-modal').style.display='block';
+  document.body.style.overflow='hidden';
+  setTimeout(()=>el('modal-amt').focus(),300);
+}
+function closeDayModal(e){
+  if(e&&e.target!==e.currentTarget)return;
+  el('day-modal').style.display='none';
+  document.body.style.overflow='';
+}
+function setModalDir(dir){
+  modalDir=dir;
+  el('modal-tab-in').className='modal-tab'+(dir==='in'?' active-in':'');
+  el('modal-tab-out').className='modal-tab'+(dir==='out'?' active-out':'');
+  el('modal-cat-group').style.display=dir==='out'?'block':'none';
+  el('modal-save-btn').className='modal-save'+(dir==='out'?' modal-save-out':'');
+}
+async function saveModalTx(){
+  if(!currentUser)return;
+  const amt=parseFloat(el('modal-amt').value),desc=el('modal-desc').value.trim();
+  if(!amt||amt<=0){showToast('Enter a valid amount','amber');return;}
+  if(!desc){showToast('Add a description','amber');return;}
+  const cat=modalDir==='in'?'Income':el('modal-cat').value;
+  const tx={dir:modalDir,amt,desc,date:modalTargetDate,cat};
+  try{
+    await db.collection(`users/${currentUser.uid}/transactions`).add(tx);
+    el('day-modal').style.display='none';
+    document.body.style.overflow='';
+    showToast(modalDir==='in'?'💵 Income added to '+modalTargetDate:'➖ Expense added to '+modalTargetDate);
+  }catch(e){showToast('Error saving: '+e.message,'red');}
+}
+
+/* ── NAV ──────────────────────────────────────────── */
 function showPage(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
@@ -725,7 +868,7 @@ function showPage(name,btn){
   if(name==='goals'){renderGoalProgress();renderHabits();}
 }
 
-/* RENDER: DASHBOARD */
+/* ── RENDER: DASHBOARD ────────────────────────────── */
 function renderDash(){
   const today=todayStr(),[m0,m1]=getMonthRange();
   const tIn=transactions.filter(t=>t.dir==='in'&&t.date===today).reduce((s,t)=>s+t.amt,0);
@@ -752,30 +895,46 @@ function renderDash(){
 }
 
 function renderRing(tOut){
-  const ringProgress=el('ring-progress'),ringPct=el('ring-pct'),ringSpent=el('ring-spent'),ringRemain=el('ring-remain'),ringBudLbl=el('ring-budget-label');
+  const ringProgress=el('ring-progress'),ringPct=el('ring-pct'),ringSpent=el('ring-spent'),ringRemain=el('ring-remain'),ringBudLbl=el('ring-budget-label'),ringNote=el('ring-source-note');
   if(!ringProgress||!ringPct)return;
-  if(dailyBudget>0){
-    const pct=Math.min(tOut/dailyBudget,1),circ=2*Math.PI*38,dash=pct*circ,remain=dailyBudget-tOut;
+  const {amount:effBudget,source}=getEffectiveDailyBudget();
+  if(effBudget>0){
+    const pct=Math.min(tOut/effBudget,1),circ=2*Math.PI*38,dash=pct*circ,remain=effBudget-tOut;
     ringProgress.style.strokeDasharray=`${dash} ${circ}`;
-    ringProgress.style.stroke=remain<0?'var(--red)':remain<=dailyBudget*0.2?'var(--amber)':'var(--green)';
+    ringProgress.style.stroke=remain<0?'var(--red)':remain<=effBudget*0.2?'var(--amber)':'var(--green)';
     ringPct.textContent=`${Math.round(pct*100)}%`;
     if(ringSpent)ringSpent.textContent=fmt(tOut);
-    if(ringRemain){ringRemain.textContent=remain<0?`${fmt(Math.abs(remain))} over budget!`:remain===0?'Budget used up':`${fmt(remain)} left`;ringRemain.className=`ring-info-remain ${remain<0?'over':remain<=dailyBudget*0.2?'warn':'ok'}`;}
-    if(ringBudLbl)ringBudLbl.textContent=`Budget: ${fmt(dailyBudget)}`;
+    if(ringRemain){ringRemain.textContent=remain<0?`${fmt(Math.abs(remain))} over budget!`:remain===0?'Budget used up':`${fmt(remain)} left`;ringRemain.className=`ring-info-remain ${remain<0?'over':remain<=effBudget*0.2?'warn':'ok'}`;}
+    if(ringBudLbl)ringBudLbl.textContent=`Daily budget: ${fmt(effBudget)}`;
+    // Source note
+    if(ringNote){
+      if(source==='monthly'){
+        ringNote.style.display='block';
+        ringNote.textContent=`📐 Calculated from your monthly limit: ${fmt(goals.outGoal)} ÷ ${daysInCurrentMonth()} days = ${fmt(effBudget)}/day`;
+      }else if(source==='manual'){
+        ringNote.style.display='block';
+        ringNote.textContent=`✏️ Manual override active. Remove it to use monthly limit ÷ 30 instead.`;
+      }else{
+        ringNote.style.display='none';
+      }
+    }
   }else{
     ringProgress.style.strokeDasharray='0 239';ringPct.textContent='0%';
     if(ringSpent)ringSpent.textContent=fmt(tOut);
-    if(ringRemain){ringRemain.textContent='Set a budget below';ringRemain.className='ring-info-remain';}
+    if(ringRemain){ringRemain.textContent='Set a monthly limit in Goals →';ringRemain.className='ring-info-remain';}
+    if(ringBudLbl)ringBudLbl.textContent='';
+    if(ringNote)ringNote.style.display='none';
   }
 }
 
 function renderWeekBars(){
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];let html='';
+  const {amount:effBudget}=getEffectiveDailyBudget();
   for(let i=6;i>=0;i--){
     const dateStr=dateOffset(i),d=new Date(dateStr+'T00:00:00'),dayName=i===0?'Today':days[d.getDay()];
     const spent=transactions.filter(t=>t.dir==='out'&&t.date===dateStr).reduce((s,t)=>s+t.amt,0);
-    const pct=dailyBudget>0?Math.min(spent/dailyBudget,1):spent>0?0.3:0;
-    const cls=dailyBudget===0?spent>0?'safe':'none':pct>=1?'over':pct>=0.8?'warn':spent>0?'safe':'none';
+    const pct=effBudget>0?Math.min(spent/effBudget,1):spent>0?0.3:0;
+    const cls=effBudget===0?spent>0?'safe':'none':pct>=1?'over':pct>=0.8?'warn':spent>0?'safe':'none';
     html+=`<div class="week-row${i===0?' today-row':''}"><span class="week-day-label${i===0?' today':''}">${dayName}</span><div class="week-bar-track"><div class="week-bar-fill ${cls}" style="width:${Math.round(pct*100)}%"></div></div><span class="week-amount">${spent>0?fmt(spent):'–'}</span></div>`;
   }
   el('week-grid').innerHTML=html;
@@ -801,15 +960,16 @@ function renderInsights(tOut,mIn,mOut,bal){
   const[m0,m1]=getMonthRange(),items=[],catTotals={};
   transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).forEach(t=>{catTotals[t.cat]=(catTotals[t.cat]||0)+t.amt;});
   const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+  const {amount:effBudget}=getEffectiveDailyBudget();
   if(topCat)items.push({cls:'amber',icon:'💡',title:'Biggest spend category',text:`You spent the most on <strong>${topCat[0]}</strong> this month — ${fmt(topCat[1])}.`});
-  if(dailyBudget>0&&tOut>dailyBudget)items.push({cls:'red',icon:'⚠️',title:'Over daily budget today',text:`Spent ${fmt(tOut)} — ${fmt(tOut-dailyBudget)} over your ${fmt(dailyBudget)} limit.`});
+  if(effBudget>0&&tOut>effBudget)items.push({cls:'red',icon:'⚠️',title:'Over daily budget today',text:`Spent ${fmt(tOut)} — ${fmt(tOut-effBudget)} over your ${fmt(effBudget)} daily limit.`});
   if(bal<0)items.push({cls:'red',icon:'📉',title:'Balance is negative',text:'More spending than income recorded. Log missing income or reduce expenses.'});
   if(goals.outGoal>0&&mOut<goals.outGoal*0.8&&mOut>0)items.push({cls:'green',icon:'✅',title:'On track with spending',text:`Spent ${fmt(mOut)} of ${fmt(goals.outGoal)} limit — ${fmt(goals.outGoal-mOut)} headroom left.`});
   if(goals.outGoal>0&&mOut>=goals.outGoal*0.8&&mOut<goals.outGoal)items.push({cls:'amber',icon:'🔔',title:'Approaching spending limit',text:`Used ${Math.round(mOut/goals.outGoal*100)}% of monthly limit. Only ${fmt(goals.outGoal-mOut)} left.`});
   el('dash-insights').innerHTML=items.map(i=>`<div class="insight-card ${i.cls}"><div class="insight-icon">${i.icon}</div><div class="insight-body"><div class="insight-title">${i.title}</div><div class="insight-text">${i.text}</div></div></div>`).join('');
 }
 
-/* RENDER: LOG */
+/* ── RENDER: LOG ──────────────────────────────────── */
 function renderLog(){
   const recEl=el('log-recent');if(!recEl)return;
   const recent=transactions.slice(0,7);
@@ -823,7 +983,7 @@ function txItemHTML(t,showDel=false){
   return `<div class="tx-item ${t.dir}"><div class="tx-icon ${t.dir}">${icon}</div><div class="tx-body"><div class="tx-desc">${escHtml(t.desc)}</div><div class="tx-meta">${t.date}<span class="tx-cat-pill">${t.cat||'Income'}</span></div></div><div class="tx-amount ${t.dir}">${t.dir==='in'?'+':'-'}${fmt(t.amt)}</div>${delBtn}</div>`;
 }
 
-/* RENDER: SPENT */
+/* ── RENDER: SPENT ────────────────────────────────── */
 function renderSpent(){
   if(!el('sp-metrics'))return;
   const from=el('sp-from').value||getMonthRange()[0],to=el('sp-to').value||getMonthRange()[1];
@@ -853,7 +1013,7 @@ function drillCategory(cat){
   drillEl.classList.add('open');
 }
 
-/* RENDER: HISTORY */
+/* ── RENDER: HISTORY (grouped by day) ────────────── */
 function renderHist(){
   if(!el('h-from'))return;
   const from=el('h-from').value||getMonthRange()[0],to=el('h-to').value||todayStr();
@@ -861,19 +1021,84 @@ function renderHist(){
   if(histFilter==='in')filtered=filtered.filter(t=>t.dir==='in');
   else if(histFilter==='out')filtered=filtered.filter(t=>t.dir==='out');
   else if(histFilter!=='all')filtered=filtered.filter(t=>t.cat===histFilter);
+
   const sumIn=filtered.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
   const sumOut=filtered.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
   const sumEl=el('hist-summary');
   if(filtered.length){sumEl.innerHTML=`<div class="hist-summary"><div class="hist-stat"><span class="hist-stat-v" style="color:var(--green)">${fmt(sumIn)}</span><span class="hist-stat-l">In</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:var(--red)">${fmt(sumOut)}</span><span class="hist-stat-l">Out</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:${(sumIn-sumOut)>=0?'var(--green)':'var(--red)'}">${fmt(sumIn-sumOut)}</span><span class="hist-stat-l">Net</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:var(--blue)">${filtered.length}</span><span class="hist-stat-l">Count</span></div></div>`;}
   else sumEl.innerHTML='';
+
   const listEl=el('hist-list');
-  if(!filtered.length){listEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-title">No transactions found</div><div class="empty-state-sub">Try adjusting the date range or filter</div></div>`;return;}
-  listEl.innerHTML=filtered.map(t=>txItemHTML(t,true)).join('');
+  if(!filtered.length){
+    // Even with no transactions, show date range days with "+ Add" buttons
+    listEl.innerHTML=renderEmptyDayRange(from,to);
+    return;
+  }
+
+  // Group by date
+  const byDate={};
+  filtered.forEach(t=>{
+    if(!byDate[t.date])byDate[t.date]=[];
+    byDate[t.date].push(t);
+  });
+
+  // If filter is 'all', also include days in range that have no transactions so user can add to them
+  let allDates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+
+  // Build HTML: group per day
+  const today=todayStr();
+  let html='';
+  allDates.forEach(dateStr=>{
+    const txs=byDate[dateStr];
+    const dayIn=txs.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
+    const dayOut=txs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
+    const dayNet=dayIn-dayOut;
+    const d=new Date(dateStr+'T00:00:00');
+    const isToday=dateStr===today;
+    const dayLabel=isToday?'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'}):d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+    html+=`<div class="hist-day-group">
+      <div class="hist-day-header" onclick="openDayModal('${dateStr}')">
+        <span class="hist-day-label">${dayLabel}</span>
+        <div class="hist-day-right">
+          <span class="hist-day-net ${dayNet>=0?'pos':'neg'}">${dayNet>=0?'+':''}${fmt(dayNet)}</span>
+          <span class="hist-add-btn">+ Add</span>
+        </div>
+      </div>
+      ${txs.map(t=>txItemHTML(t,true)).join('')}
+    </div>`;
+  });
+
+  listEl.innerHTML=html;
+}
+
+function renderEmptyDayRange(from,to){
+  // Generate date list for the range
+  const dates=[];let cur=new Date(from+'T00:00:00'),end=new Date(to+'T00:00:00');
+  while(cur<=end&&dates.length<60){
+    dates.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate()+1);
+  }
+  dates.reverse();
+  const today=todayStr();
+  return dates.map(dateStr=>{
+    const d=new Date(dateStr+'T00:00:00');
+    const isToday=dateStr===today;
+    const label=isToday?'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'}):d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+    return `<div class="hist-day-group">
+      <div class="hist-day-header" onclick="openDayModal('${dateStr}')">
+        <span class="hist-day-label" style="color:var(--txt3)">${label}</span>
+        <div class="hist-day-right">
+          <span class="hist-day-net" style="color:var(--txt3)">no entries</span>
+          <span class="hist-add-btn">+ Add</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function setHistFilter(filter,btn){histFilter=filter;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));btn.classList.add('active');renderHist();}
 
-/* RENDER: GOALS */
+/* ── RENDER: GOALS ────────────────────────────────── */
 function renderGoalProgress(){
   if(!el('goal-in-progress'))return;
   const[m0,m1]=getMonthRange();
@@ -893,11 +1118,11 @@ function renderHabits(){
   listEl.innerHTML=habits.map(h=>{const done=h.lastDone===today;return `<div class="habit-item"><span class="habit-icon">${h.icon}</span><div class="habit-body"><div class="habit-name">${escHtml(h.name)}</div><div class="habit-desc">${done?'✓ Done today!':'Not done yet today'}</div></div><div class="habit-streak"><span class="habit-streak-num">${h.streak||0}</span><span class="habit-streak-label">streak</span></div><button class="habit-check ${done?'done':''}" onclick="toggleHabit('${h.id}')">${done?'✓':''}</button><button class="habit-del" onclick="deleteHabit('${h.id}')">🗑️</button></div>`;}).join('');
 }
 
-/* PWA */
+/* ── PWA ──────────────────────────────────────────── */
 let deferredInstall;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(el('install-banner'))el('install-banner').style.display='flex';});
 
-/* INIT */
+/* ── INIT ─────────────────────────────────────────── */
 function initApp(){
   const today=todayStr(),[m0,m1]=getMonthRange();
   if(el('header-date'))el('header-date').textContent=todayLabel();
