@@ -32,6 +32,7 @@ button{font-family:var(--fb)}
 .feat-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:15px 20px;background:var(--txt);color:var(--bg);border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .15s;letter-spacing:.2px}
 .google-btn:hover{opacity:.92}.google-btn:active{transform:scale(.98)}
+.google-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .google-icon{width:20px;height:20px;flex-shrink:0}
 .login-err{font-size:13px;font-weight:500;color:var(--red);min-height:18px;margin-top:12px;text-align:center}
 .login-note{font-size:12px;color:var(--txt3);line-height:1.6;text-align:center;margin-top:16px}
@@ -73,28 +74,18 @@ button{font-family:var(--fb)}
 .blbl{font-family:var(--fm);font-size:10px;font-weight:500;color:var(--txt3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
 .bamt{font-family:var(--fm);font-size:36px;font-weight:600;color:var(--txt);letter-spacing:-1px;margin-bottom:18px;line-height:1}
 .bamt .cur{font-size:16px;color:var(--txt3);margin-right:4px}
-
-/* 4-col stats grid */
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .stat-box{background:var(--surface);border-radius:var(--rs);padding:10px 12px}
 .stat-period{font-family:var(--fm);font-size:8px;font-weight:600;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
 .stat-lbl{font-family:var(--fm);font-size:8px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
 .stat-val{font-family:var(--fm);font-size:15px;font-weight:500}
 .stat-val.g{color:var(--accent)}.stat-val.r{color:var(--red)}
-
-/* All-time dropdown */
 .alltime-drop{border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
-.alltime-drop summary{
-  font-family:var(--fm);font-size:9px;font-weight:600;color:var(--txt3);
-  letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;
-  list-style:none;display:flex;align-items:center;justify-content:space-between;
-  user-select:none;
-}
+.alltime-drop summary{font-family:var(--fm);font-size:9px;font-weight:600;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;}
 .alltime-drop summary::-webkit-details-marker{display:none}
 .alltime-drop summary::after{content:'▾';font-size:10px;transition:transform .2s}
 .alltime-drop[open] summary::after{transform:rotate(-180deg)}
 .alltime-drop .stats-grid{margin-top:10px;margin-bottom:0}
-
 .mini-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .mini{background:var(--surface);border-radius:var(--rs);padding:12px}
 .mini-lbl{font-family:var(--fm);font-size:9px;font-weight:500;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
@@ -225,7 +216,7 @@ button{font-family:var(--fb)}
       <div class="login-feat"><div class="feat-dot"></div>Works on any phone, tablet, or computer</div>
       <div class="login-feat"><div class="feat-dot"></div>Private and secured to your account</div>
     </div>
-    <button class="google-btn" onclick="signInWithGoogle()">
+    <button class="google-btn" id="googleSignInBtn" onclick="signInWithGoogle()">
       <svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
       Continue with Google
     </button>
@@ -267,7 +258,6 @@ button{font-family:var(--fb)}
           <div class="blbl">Net Balance</div>
           <div class="bamt"><span class="cur">KES</span><span id="netBal">0</span></div>
 
-          <!-- TODAY + MONTH side by side (always visible) -->
           <div class="stats-grid">
             <div class="stat-box">
               <div class="stat-period">Today</div>
@@ -291,7 +281,6 @@ button{font-family:var(--fb)}
             </div>
           </div>
 
-          <!-- ALL TIME — dropdown -->
           <details class="alltime-drop">
             <summary>All Time</summary>
             <div class="stats-grid">
@@ -483,8 +472,13 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth(), db=firebase.firestore();
-db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Persistence:',e.code));
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ── FIX 1: Persist auth session locally so redirect sign-in survives page reload ──
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+db.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn('Persistence:', e.code));
 
 const CATS=[
   {n:'Food',e:'🍔'},{n:'Transport',e:'🚗'},{n:'Shopping',e:'🛍️'},
@@ -500,19 +494,22 @@ let addDir='out',editDir='out',addCat='Other',editCat='Other';
 let txListener=null,allTimeListener=null;
 let vYear=new Date().getFullYear(),vMonth=new Date().getMonth();
 
-function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 const fmt=n=>Number(n||0).toLocaleString('en-KE',{maximumFractionDigits:0});
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function getMonthRange(y=vYear,m=vMonth){
   return [`${y}-${String(m+1).padStart(2,'0')}-01`,`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`];
 }
-function mLabelStr(y,m){return new Date(y,m,1).toLocaleDateString('en',{month:'short',year:'numeric'})}
+function mLabelStr(y,m){return new Date(y,m,1).toLocaleDateString('en',{month:'short',year:'numeric'});}
 
 let toastTimer;
 function toast(msg,type='n'){
   const el=document.getElementById('toast');
-  el.textContent=msg;el.style.color={g:'var(--accent)',r:'var(--red)',a:'var(--amber)',n:'var(--txt)'}[type]||'var(--txt)';
-  el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+  el.textContent=msg;
+  el.style.color={g:'var(--accent)',r:'var(--red)',a:'var(--amber)',n:'var(--txt)'}[type]||'var(--txt)';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
 }
 
 function computeStats(data){
@@ -536,27 +533,94 @@ function computeStats(data){
   s.net=s.totalIn-s.totalOut;return s;
 }
 
-/* AUTH */
-async function signInWithGoogle(){
-  const provider=new firebase.auth.GoogleAuthProvider();
-  document.getElementById('loginErr').textContent='';
-  try{await auth.signInWithPopup(provider);}
-  catch(err){
-    if(err.code==='auth/popup-blocked'||err.code==='auth/popup-closed-by-user'){
-      try{await auth.signInWithRedirect(provider);}catch(e2){document.getElementById('loginErr').textContent=e2.message;}
-    }else if(err.code!=='auth/cancelled-popup-request'){
-      document.getElementById('loginErr').textContent=err.message;
+// ── FIX 2: Mobile-aware Google sign-in ──
+// Mobile browsers (Android/iOS) block popups — always use redirect on mobile.
+async function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  const errEl = document.getElementById('loginErr');
+  const btn = document.getElementById('googleSignInBtn');
+
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Signing in…';
+
+  try {
+    // Detect mobile user agents — use redirect to avoid popup blocking
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // Redirect flow: page reloads and auth.getRedirectResult() handles the result
+      await auth.signInWithRedirect(provider);
+      return; // Page will reload, no further execution
+    }
+
+    // Desktop: use popup
+    await auth.signInWithPopup(provider);
+
+  } catch (err) {
+    console.error('Sign-in error:', err);
+
+    // Re-enable button on error
+    btn.disabled = false;
+    btn.innerHTML = `<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
+
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+      // Popup was blocked — silently fall back to redirect
+      try {
+        await auth.signInWithRedirect(provider);
+      } catch (e2) {
+        errEl.textContent = e2.message || 'Sign in failed. Please try again.';
+      }
+    } else if (err.code !== 'auth/cancelled-popup-request') {
+      errEl.textContent = err.message || 'Sign in failed. Please try again.';
     }
   }
 }
-auth.getRedirectResult().catch(e=>{const el=document.getElementById('loginErr');if(el&&e?.message)el.textContent=e.message;});
-async function doSignOut(){if(txListener)txListener();if(allTimeListener)allTimeListener();txs=[];allTimeTxs=[];await auth.signOut();}
+
+// ── FIX 3: Handle redirect result after mobile sign-in redirect ──
+auth.getRedirectResult()
+  .then(result => {
+    // Result is handled by onAuthStateChanged below — nothing extra needed here
+  })
+  .catch(err => {
+    if (err && err.message) {
+      const el = document.getElementById('loginErr');
+      if (el) el.textContent = err.message;
+      const btn = document.getElementById('googleSignInBtn');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
+      }
+    }
+  });
+
+async function doSignOut(){
+  if(txListener)txListener();
+  if(allTimeListener)allTimeListener();
+  txs=[];allTimeTxs=[];
+  await auth.signOut();
+}
 
 auth.onAuthStateChanged(u=>{
   user=u;
   const ls=document.getElementById('loginScreen'),ld=document.getElementById('loadingScreen'),app=document.getElementById('app');
-  if(u){ls.style.display='none';ld.style.display='flex';app.style.display='none';initApp();}
-  else{ls.style.display='flex';ld.style.display='none';app.style.display='none';txs=[];}
+  if(u){
+    ls.style.display='none';
+    ld.style.display='flex';
+    app.style.display='none';
+    initApp();
+  }else{
+    ls.style.display='flex';
+    ld.style.display='none';
+    app.style.display='none';
+    txs=[];
+    // Re-enable sign-in button in case it was disabled
+    const btn=document.getElementById('googleSignInBtn');
+    if(btn){
+      btn.disabled=false;
+      btn.innerHTML=`<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
+    }
+  }
 });
 
 function initApp(){
@@ -587,11 +651,11 @@ async function saveSettings(){
   ud.monthlyBudget=parseFloat(document.getElementById('sMonthlyBudget').value)||0;
   try{
     await db.collection('users').doc(user.uid).set({dailyBudget:ud.dailyBudget,monthlyBudget:ud.monthlyBudget},{merge:true});
-    toast('Budgets saved ✅','g');renderDash(computeStats(txs));
+    toast('Budgets saved ✅','g');
+    renderDash(computeStats(txs));
   }catch(e){toast('Save failed','r');}
 }
 
-/* FIRESTORE — month listener */
 function listenTxs(){
   if(txListener)txListener();
   const [m0,m1]=getMonthRange();
@@ -603,7 +667,6 @@ function listenTxs(){
     },err=>{console.error(err);toast('⚠️ Connection issue','a');});
 }
 
-/* FIRESTORE — all-time listener (for the dropdown) */
 function listenAllTime(){
   if(allTimeListener)allTimeListener();
   allTimeListener=db.collection(`users/${user.uid}/transactions`)
@@ -628,13 +691,10 @@ function chMonth(d){
   listenTxs();
 }
 
-/* RENDER DASHBOARD */
 function renderDash(st){
   document.getElementById('netBal').textContent=fmt(st.net);
-  // today
   document.getElementById('todayIn').textContent=fmt(st.todayIn);
   document.getElementById('todayOut').textContent=fmt(st.todayOut);
-  // month
   document.getElementById('totIn').textContent=fmt(st.totalIn);
   document.getElementById('totOut').textContent=fmt(st.totalOut);
   renderRing(st);renderWeekBars(st);
@@ -661,7 +721,6 @@ function renderWeekBars(st){
   }).join('');
 }
 
-/* HISTORY */
 function renderHistory(){
   let filtered=[...txs];
   if(searchQ){const q=searchQ.toLowerCase();filtered=filtered.filter(t=>(t.desc||'').toLowerCase().includes(q)||(t.cat||'').toLowerCase().includes(q));}
@@ -673,6 +732,7 @@ function renderHistory(){
   Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(date=>{html+=`<div class="grp-lbl">${dateLbl(date)}</div><div class="tx-list">${groups[date].map(txRow).join('')}</div>`;});
   document.getElementById('histList').innerHTML=html;
 }
+
 function dateLbl(s){const today=todayStr(),yday=new Date(Date.now()-864e5).toISOString().split('T')[0];if(s===today)return'Today';if(s===yday)return'Yesterday';return new Date(s).toLocaleDateString('en',{weekday:'long',day:'numeric',month:'short'});}
 
 function txRow(t){
@@ -681,7 +741,6 @@ function txRow(t){
   return `<div class="txr" id="tr-${t.id}"><div class="txr-ico" style="background:${clr}22;color:${clr}">${cat.e}</div><div class="txr-info"><div class="txr-d">${t.desc||t.cat||'Transaction'}</div><div class="txr-m">${t.cat} · ${t.date}</div></div><div class="txr-right"><div class="txr-a ${t.dir==='in'?'g':'r'}">${sign} KES ${fmt(t.amt)}</div><div class="txr-acts"><button class="ta e" onclick="openEdit('${t.id}')">✏️</button><button class="ta d" onclick="confirmDel('${t.id}','${desc}',${t.amt})">🗑️</button></div></div></div>`;
 }
 
-/* INSIGHTS */
 function renderInsights(st){
   const pad=document.getElementById('insPad');
   if(txs.length<3){pad.innerHTML=`<div class="empty"><div class="empty-ico">🧠</div><p>Add more transactions to unlock insights.</p></div>`;return;}
@@ -698,12 +757,13 @@ function renderInsights(st){
 function iCard(c,ico,t,tx){return `<div class="ic ${c}"><div class="ic-ico">${ico}</div><div class="ic-ttl">${t}</div><div class="ic-txt">${tx}</div></div>`;}
 function noSpendStreak(){const days=new Set(txs.filter(t=>t.dir==='out').map(t=>t.date));let n=0,d=new Date();while(n<366){const s=d.toISOString().split('T')[0];if(days.has(s))break;n++;d.setDate(d.getDate()-1);}return n;}
 
-/* ADD TX */
 function openAdd(){setDir('out');addCat='Other';document.getElementById('aAmt').value='';document.getElementById('aDesc').value='';document.getElementById('aDate').value=todayStr();document.getElementById('aTime').value='';buildCatGrid('addCatGrid','Other');document.getElementById('addModal').classList.add('show');setTimeout(()=>document.getElementById('aAmt').focus(),300);}
 function closeAdd(){document.getElementById('addModal').classList.remove('show');}
 async function saveAdd(){
   const amt=parseFloat(document.getElementById('aAmt').value),desc=document.getElementById('aDesc').value.trim(),date=document.getElementById('aDate').value||todayStr();
-  if(!amt||amt<=0)return toast('Enter a valid amount','a');if(amt>100000000)return toast('Amount too large','a');if(!desc)return toast('Add a description','a');
+  if(!amt||amt<=0)return toast('Enter a valid amount','a');
+  if(amt>100000000)return toast('Amount too large','a');
+  if(!desc)return toast('Add a description','a');
   const btn=document.getElementById('saveAddBtn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Saving…';
   try{
     await db.collection(`users/${user.uid}/transactions`).add({amt,desc,date,dir:addDir,cat:addCat,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
@@ -715,43 +775,38 @@ async function saveAdd(){
 }
 function setDir(d){addDir=d;document.getElementById('dOut').className='dir-btn'+(d==='out'?' ao':'');document.getElementById('dIn').className='dir-btn'+(d==='in'?' ai':'');}
 
-/* EDIT TX */
 function openEdit(id){const t=txs.find(x=>x.id===id);if(!t)return toast('Not found','r');setEditDir(t.dir||'out');editCat=t.cat||'Other';document.getElementById('eAmt').value=t.amt;document.getElementById('eDesc').value=t.desc||'';document.getElementById('eDate').value=t.date||todayStr();document.getElementById('eTxId').value=id;buildCatGrid('editCatGrid',editCat);document.getElementById('editModal').classList.add('show');}
 function closeEdit(){document.getElementById('editModal').classList.remove('show');}
 async function saveEdit(){
   const id=document.getElementById('eTxId').value,amt=parseFloat(document.getElementById('eAmt').value),desc=document.getElementById('eDesc').value.trim(),date=document.getElementById('eDate').value||todayStr();
-  if(!amt||amt<=0)return toast('Enter a valid amount','a');if(amt>100000000)return toast('Amount too large','a');if(!desc)return toast('Add a description','a');
+  if(!amt||amt<=0)return toast('Enter a valid amount','a');
+  if(amt>100000000)return toast('Amount too large','a');
+  if(!desc)return toast('Add a description','a');
   try{await db.collection(`users/${user.uid}/transactions`).doc(id).update({amt,desc,date,dir:editDir,cat:editCat,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});closeEdit();toast('Updated ✅','g');}
   catch(e){toast('Update failed','r');}
 }
 function setEditDir(d){editDir=d;document.getElementById('eDirOut').className='dir-btn'+(d==='out'?' ao':'');document.getElementById('eDirIn').className='dir-btn'+(d==='in'?' ai':'');}
 
-/* DELETE */
 function confirmDel(id,desc,amt){if(confirm(`Delete "${desc}"\nKES ${fmt(amt)}?\n\nThis cannot be undone.`))delTx(id);}
 async function delTx(id){try{await db.collection(`users/${user.uid}/transactions`).doc(id).delete();toast('Deleted','a');}catch(e){toast('Delete failed','r');}}
 
-/* CAT GRIDS */
 function buildCatGrids(){buildCatGrid('addCatGrid','Other');buildCatGrid('editCatGrid','Other');}
 function buildCatGrid(gridId,sel){const g=document.getElementById(gridId);if(!g)return;g.innerHTML=CATS.map(c=>`<div class="cat-chip${c.n===sel?' sel':''}" onclick="selCat('${gridId}','${c.n}')"><span class="ce">${c.e}</span><span class="cn">${c.n}</span></div>`).join('');}
 function selCat(gridId,name){if(gridId==='addCatGrid')addCat=name;else editCat=name;buildCatGrid(gridId,name);}
 
-/* SEARCH & FILTER */
 function onSearch(v){searchQ=v;renderHistory();}
 function setFilter(f,el){activeFilter=f;document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));if(el)el.classList.add('active');renderHistory();}
 
-/* TAB NAV */
 function switchTab(t){['dash','hist','insights','settings'].forEach(id=>{document.getElementById(`p${cap(id)}`)?.classList.remove('active');document.getElementById(`nb-${id}`)?.classList.remove('active');});document.getElementById(`p${cap(t)}`)?.classList.add('active');document.getElementById(`nb-${t}`)?.classList.add('active');}
 
-/* THEME */
 function applyTheme(th){document.documentElement.setAttribute('data-theme',th);localStorage.setItem('ct-theme',th);document.getElementById('themeBtn').textContent=th==='dark'?'☀️':'🌙';const dm=document.getElementById('dmToggle');if(dm)dm.classList.toggle('on',th==='dark');}
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
 
-/* ONLINE */
 function watchOnline(){const bar=document.getElementById('offlineBar'),sync=()=>bar.classList.toggle('show',!navigator.onLine);window.addEventListener('online',sync);window.addEventListener('offline',sync);sync();}
 
-/* MISC */
 function dismissBanner(){document.getElementById('budgetBanner').classList.remove('show');}
 function emptyHTML(ico,msg){return `<div class="empty"><div class="empty-ico">${ico}</div><p>${msg}</p></div>`;}
+
 document.getElementById('addModal').addEventListener('click',function(e){if(e.target===this)closeAdd();});
 document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEdit();});
 </script>
