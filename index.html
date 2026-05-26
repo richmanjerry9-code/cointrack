@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CoinTrack">
+<meta name="description" content="Track every coin. Break bad habits. Own your money.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>CoinTrack — Own Every Coin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Unbounded:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div id="login-screen">
+  <div class="login-bg-glow login-glow-1"></div>
+  <div class="login-bg-glow login-glow-2"></div>
+
+  <div class="login-wrap">
+    <div class="login-logo">Coin<span>Track</span></div>
+    <div class="login-tagline">Track every coin.<br>Own your money — on every device.</div>
+
+    <div class="login-features">
+      <div class="login-feat"><span>☁️</span> Data synced to the cloud</div>
+      <div class="login-feat"><span>📱</span> Works on any device</div>
+      <div class="login-feat"><span>🔒</span> Private &amp; secure</div>
+    </div>
+
+    <button class="google-btn" id="google-signin-btn" onclick="signInWithGoogle()">
+      <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <p class="login-error" id="login-error"></p>
+    <p class="login-privacy">Your data is stored securely in your personal account.<br>We never share or sell your information.</p>
+  </div>
+</div>
+
+<!-- ===================== LOADING SCREEN ===================== -->
+<div id="loading-screen" style="display:none">
+  <div class="loading-logo">Coin<span>Track</span></div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading your data…</div>
+</div>
+
+<!-- ===================== MAIN APP ===================== -->
+<div class="app-shell" id="app-shell" style="display:none">
+
+  <!-- HEADER -->
+  <header class="app-header" role="banner">
+    <div class="header-left">
+      <div class="app-logo">Coin<span>Track</span></div>
+      <div class="header-date" id="header-date"></div>
+    </div>
+    <div class="header-right" style="display:flex;align-items:center;gap:10px">
+      <div>
+        <div class="header-bal-label">Balance</div>
+        <div class="header-bal-num" id="header-balance">KSh 0</div>
+      </div>
+      <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()" title="Account">
+        <img id="user-photo" src="" alt="" style="display:none">
+        <span id="user-initials"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- USER MENU -->
+  <div class="user-menu" id="user-menu" style="display:none">
+    <div class="user-menu-info">
+      <div class="user-menu-name" id="user-menu-name"></div>
+      <div class="user-menu-email" id="user-menu-email"></div>
+    </div>
+    <div class="user-menu-divider"></div>
+    <button class="user-menu-btn" onclick="handleSignOut()">🚪 Sign out</button>
+  </div>
+  <div class="user-menu-backdrop" id="user-menu-backdrop" onclick="closeUserMenu()" style="display:none"></div>
+
+  <!-- PAGE CONTENT -->
+  <main class="page-content" id="main-content">
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <section class="page active" id="page-dash" role="tabpanel" aria-label="Dashboard">
+
+      <div class="install-banner" id="install-banner" style="display:none">
+        <span class="install-icon">📲</span>
+        <div class="install-text">
+          <strong>Install as App</strong>
+          Tap browser menu → "Add to Home Screen"
+        </div>
+        <button class="btn btn-green btn-sm" id="install-btn" aria-label="Install app">Install</button>
+      </div>
+
+      <div class="balance-hero" aria-label="Current balance summary">
+        <div class="balance-label">💰 Your balance right now</div>
+        <div class="balance-amount" id="dash-balance">KSh 0</div>
+        <div class="balance-sub" id="dash-balance-sub">Log your first transaction below</div>
+        <div class="balance-grid">
+          <div class="bal-stat">
+            <div class="bal-stat-l">All time in</div>
+            <div class="bal-stat-v g" id="dash-total-in">KSh 0</div>
+          </div>
+          <div class="bal-stat">
+            <div class="bal-stat-l">All time out</div>
+            <div class="bal-stat-v r" id="dash-total-out">KSh 0</div>
+          </div>
+          <div class="bal-stat">
+            <div class="bal-stat-l">This month in</div>
+            <div class="bal-stat-v g" id="dash-month-in">KSh 0</div>
+          </div>
+          <div class="bal-stat">
+            <div class="bal-stat-l">This month out</div>
+            <div class="bal-stat-v r" id="dash-month-out">KSh 0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="budget-ring-card" aria-label="Daily budget tracker">
+        <div class="card-title">📅 Today's spending budget</div>
+        <div class="budget-ring-inner">
+          <div class="ring-container" role="img" aria-label="Budget usage ring">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="ring-bg" cx="50" cy="50" r="38"/>
+              <circle class="ring-progress" id="ring-progress" cx="50" cy="50" r="38"
+                stroke-dasharray="0 239" stroke="#00e676"/>
+            </svg>
+            <div class="ring-center-text">
+              <span class="ring-pct" id="ring-pct">0%</span>
+              <span class="ring-pct-label">used</span>
+            </div>
+          </div>
+          <div class="ring-info">
+            <div class="ring-info-title">Spent today</div>
+            <div class="ring-info-spent" id="ring-spent">KSh 0</div>
+            <div class="ring-info-remain" id="ring-remain">Set a budget below</div>
+            <div class="ring-info-budget" id="ring-budget-label"></div>
+          </div>
+        </div>
+        <div class="budget-edit-row">
+          <div class="budget-edit-field">
+            <label for="daily-budget-inp">Daily budget (KSh)</label>
+            <input type="number" id="daily-budget-inp" placeholder="e.g. 1500" inputmode="numeric" min="1">
+          </div>
+          <button class="btn btn-green btn-sm" onclick="saveDailyBudget()" aria-label="Set daily budget">Set</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Last 7 days vs budget</div>
+        <div class="week-grid" id="week-grid" aria-label="7-day spending chart"></div>
+      </div>
+
+      <div class="card" id="dash-goals-card">
+        <div class="card-title">🎯 Monthly goals</div>
+        <div id="dash-goals-content"></div>
+      </div>
+
+      <div id="dash-insights" aria-live="polite"></div>
+
+    </section>
+
+    <!-- ===================== LOG ===================== -->
+    <section class="page" id="page-log" role="tabpanel" aria-label="Log money">
+
+      <div class="section-title">
+        <span class="dot dot-green"></span>Money In
+      </div>
+      <div class="card card-green-border">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="in-amt">Amount (KSh)</label>
+            <input type="number" id="in-amt" placeholder="50000" inputmode="numeric" min="1">
+          </div>
+          <div class="form-group">
+            <label for="in-date">Date</label>
+            <input type="date" id="in-date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="in-desc">Source / description</label>
+          <input type="text" id="in-desc" placeholder="Salary, M-Pesa, business...">
+        </div>
+        <button class="btn btn-green btn-full" onclick="addTx('in')">➕ Record Money In</button>
+      </div>
+
+      <div class="section-title" style="margin-top:8px">
+        <span class="dot dot-red"></span>Money Out
+      </div>
+      <div class="card card-red-border">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="out-amt">Amount (KSh)</label>
+            <input type="number" id="out-amt" placeholder="500" inputmode="numeric" min="1">
+          </div>
+          <div class="form-group">
+            <label for="out-date">Date</label>
+            <input type="date" id="out-date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="out-desc">What did you buy?</label>
+          <input type="text" id="out-desc" placeholder="Unga 2kg, matatu, airtime...">
+        </div>
+        <div class="form-group">
+          <label for="out-cat">Category</label>
+          <select id="out-cat">
+            <option value="Food">🍽️ Food &amp; Groceries</option>
+            <option value="Transport">🚌 Transport</option>
+            <option value="Bills">💡 Bills &amp; Utilities</option>
+            <option value="Health">🏥 Health</option>
+            <option value="Entertainment">🎉 Entertainment</option>
+            <option value="Clothing">👗 Clothing</option>
+            <option value="Savings">🏦 Savings / Transfer</option>
+            <option value="Airtime">📱 Airtime &amp; Data</option>
+            <option value="Education">📚 Education</option>
+            <option value="Other">📦 Other</option>
+          </select>
+        </div>
+        <button class="btn btn-red btn-full" onclick="addTx('out')">➖ Record Money Out</button>
+      </div>
+
+      <div class="section-title" style="margin-top:8px">
+        <span class="dot dot-blue"></span>Recent transactions
+      </div>
+      <div id="log-recent"></div>
+
+    </section>
+
+    <!-- ===================== WHAT I BOUGHT ===================== -->
+    <section class="page" id="page-spent" role="tabpanel" aria-label="Spending breakdown">
+      <div class="section-title">
+        <span class="dot dot-purple"></span>Where my money went
+      </div>
+
+      <div class="date-filter-row">
+        <div class="form-group" style="margin:0">
+          <label for="sp-from">From</label>
+          <input type="date" id="sp-from">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="sp-to">To</label>
+          <input type="date" id="sp-to">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="renderSpent()" style="align-self:flex-end">View</button>
+      </div>
+
+      <div class="metrics-grid" id="sp-metrics"></div>
+
+      <div class="card">
+        <div class="card-title">📂 By category — tap to see every purchase</div>
+        <div class="cat-grid" id="sp-cats"></div>
+      </div>
+
+      <div class="drill-panel" id="drill-panel">
+        <div class="drill-title" id="drill-title"></div>
+        <div id="drill-list"></div>
+      </div>
+
+    </section>
+
+    <!-- ===================== HISTORY ===================== -->
+    <section class="page" id="page-hist" role="tabpanel" aria-label="Transaction history">
+      <div class="section-title">
+        <span class="dot dot-amber"></span>Full history
+      </div>
+
+      <div class="date-filter-row">
+        <div class="form-group" style="margin:0">
+          <label for="h-from">From</label>
+          <input type="date" id="h-from">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="h-to">To</label>
+          <input type="date" id="h-to">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="renderHist()" style="align-self:flex-end">Filter</button>
+      </div>
+
+      <div class="filter-row" role="group" aria-label="Filter transactions">
+        <button class="filter-chip active" onclick="setHistFilter('all', this)">All</button>
+        <button class="filter-chip" onclick="setHistFilter('in', this)">Money in</button>
+        <button class="filter-chip" onclick="setHistFilter('out', this)">Money out</button>
+        <button class="filter-chip" onclick="setHistFilter('Food', this)">Food</button>
+        <button class="filter-chip" onclick="setHistFilter('Transport', this)">Transport</button>
+        <button class="filter-chip" onclick="setHistFilter('Bills', this)">Bills</button>
+      </div>
+
+      <div id="hist-summary" aria-live="polite"></div>
+      <div id="hist-list"></div>
+    </section>
+
+    <!-- ===================== GOALS & HABITS ===================== -->
+    <section class="page" id="page-goals" role="tabpanel" aria-label="Goals and habits">
+      <div class="section-title">
+        <span class="dot dot-gold"></span>Goals &amp; Habits
+      </div>
+
+      <div class="goal-card goal-card-blue">
+        <div class="card-title card-title-blue">📈 Monthly income goal</div>
+        <div class="form-group">
+          <label for="goal-in">Target income per month (KSh)</label>
+          <input type="number" id="goal-in" placeholder="e.g. 80000" inputmode="numeric">
+        </div>
+        <div id="goal-in-progress"></div>
+      </div>
+
+      <div class="goal-card goal-card-red">
+        <div class="card-title card-title-red">📉 Monthly spending limit</div>
+        <div class="form-group">
+          <label for="goal-out">Max I should spend per month (KSh)</label>
+          <input type="number" id="goal-out" placeholder="e.g. 40000" inputmode="numeric">
+        </div>
+        <div id="goal-out-progress"></div>
+      </div>
+
+      <div class="goal-card goal-card-gold">
+        <div class="card-title card-title-gold">🏦 Total savings goal</div>
+        <div class="form-group">
+          <label for="goal-save">Target savings amount (KSh)</label>
+          <input type="number" id="goal-save" placeholder="e.g. 100000" inputmode="numeric">
+        </div>
+        <div id="goal-save-progress"></div>
+      </div>
+
+      <button class="btn btn-green btn-full" onclick="saveGoals()">💾 Save all goals</button>
+
+      <div class="divider"></div>
+
+      <div class="section-title">
+        <span class="dot dot-gold"></span>Daily money habits
+      </div>
+      <p class="habits-sub">Track good habits. Every day you stick to them builds your streak 🔥</p>
+      <div id="habits-list"></div>
+
+      <div class="card" style="margin-top:8px">
+        <div class="card-title">➕ Add a custom habit</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="habit-name">Habit name</label>
+            <input type="text" id="habit-name" placeholder="e.g. No junk food">
+          </div>
+          <div class="form-group">
+            <label for="habit-icon">Icon (emoji)</label>
+            <input type="text" id="habit-icon" placeholder="🎯" maxlength="2">
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-full" onclick="addHabit()">Add habit</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <button class="nav-btn active" onclick="showPage('dash', this)" aria-label="Dashboard" aria-selected="true">
+      <span class="nav-icon" aria-hidden="true">🏠</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-btn" onclick="showPage('log', this)" aria-label="Log money" aria-selected="false">
+      <span class="nav-icon" aria-hidden="true">✏️</span>
+      <span>Log</span>
+    </button>
+    <button class="nav-btn" onclick="showPage('spent', this)" aria-label="What I bought" aria-selected="false">
+      <span class="nav-icon" aria-hidden="true">🧾</span>
+      <span>Bought</span>
+    </button>
+    <button class="nav-btn" onclick="showPage('hist', this)" aria-label="History" aria-selected="false">
+      <span class="nav-icon" aria-hidden="true">📋</span>
+      <span>History</span>
+    </button>
+    <button class="nav-btn" onclick="showPage('goals', this)" aria-label="Goals and habits" aria-selected="false">
+      <span class="nav-icon" aria-hidden="true">🎯</span>
+      <span>Goals</span>
+    </button>
+  </nav>
+
+</div><!-- end app-shell -->
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ===================== FIREBASE SDK ===================== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "CoinTrack",
+  "short_name": "CoinTrack",
+  "description": "Track every coin. Own your money.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f"
+}
