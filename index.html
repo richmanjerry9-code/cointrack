@@ -7,13 +7,107 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CoinTrack">
-<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>CoinTrack — Own Every Coin</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="css.js"></script>
+<style>
+  #login-screen  { display: none !important; }
+  #loading-screen{ display: flex  !important; }
+  #app-shell     { display: none !important; }
+
+  /* ── BUDGET GOALS ─────────────────────────────── */
+  .bgoal-list { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+
+  .bgoal-item {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px 14px 12px;
+    position:relative;
+  }
+  .bgoal-item.completed { border-color:rgba(52,199,89,.35); }
+  .bgoal-item.over      { border-color:rgba(255,69,58,.35); }
+
+  .bgoal-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .bgoal-icon { font-size:22px; line-height:1; }
+  .bgoal-name { font-size:14px; font-weight:600; flex:1; color:var(--txt); }
+  .bgoal-status-pill {
+    font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; letter-spacing:.3px;
+  }
+  .bgoal-status-pill.ok        { background:rgba(52,199,89,.15);  color:#34c759; }
+  .bgoal-status-pill.completed { background:rgba(52,199,89,.2);   color:#34c759; }
+  .bgoal-status-pill.warn      { background:rgba(255,159,10,.15); color:#ff9f0a; }
+  .bgoal-status-pill.over      { background:rgba(255,69,58,.15);  color:#ff453a; }
+
+  .bgoal-bar-track {
+    height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-bottom:8px;
+  }
+  .bgoal-bar-fill {
+    height:100%; border-radius:3px; transition:width .4s ease;
+  }
+  .bgoal-bar-fill.ok        { background:#34c759; }
+  .bgoal-bar-fill.warn      { background:#ff9f0a; }
+  .bgoal-bar-fill.over      { background:#ff453a; }
+  .bgoal-bar-fill.completed { background:#34c759; }
+
+  .bgoal-meta {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12px; color:var(--txt2);
+  }
+  .bgoal-meta-amt { font-family:'DM Mono',monospace; font-size:12px; color:var(--txt); }
+  .bgoal-del {
+    position:absolute; top:10px; right:10px;
+    background:none; border:none; cursor:pointer; font-size:14px; opacity:.5;
+    padding:4px; color:var(--txt2);
+  }
+  .bgoal-del:hover { opacity:1; }
+
+  /* ── GOAL SELECTOR IN LOG FORM ────────────────── */
+  .goal-link-row {
+    margin-top:10px;
+    padding:10px 12px;
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:13px;
+    color:var(--txt2);
+  }
+  .goal-link-row label { display:block; margin-bottom:6px; font-size:12px; color:var(--txt3); }
+  .goal-link-row select {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; color:var(--txt); padding:8px 10px; font-size:13px; outline:none;
+  }
+
+  /* ── DASHBOARD BUDGET GOALS CARD ─────────────── */
+  .bgoal-dash-item {
+    display:flex; align-items:center; gap:10px; padding:10px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .bgoal-dash-item:last-child { border-bottom:none; padding-bottom:0; }
+  .bgoal-dash-icon { font-size:20px; }
+  .bgoal-dash-info { flex:1; min-width:0; }
+  .bgoal-dash-name { font-size:13px; font-weight:500; color:var(--txt); margin-bottom:4px; }
+  .bgoal-dash-track { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .bgoal-dash-fill  { height:100%; border-radius:2px; transition:width .4s; }
+  .bgoal-dash-fill.ok        { background:#34c759; }
+  .bgoal-dash-fill.warn      { background:#ff9f0a; }
+  .bgoal-dash-fill.over      { background:#ff453a; }
+  .bgoal-dash-fill.completed { background:#34c759; }
+  .bgoal-dash-right { text-align:right; font-size:12px; white-space:nowrap; }
+  .bgoal-dash-spent { font-family:'DM Mono',monospace; font-size:12px; color:var(--txt); }
+  .bgoal-dash-badge { font-size:10px; font-weight:600; padding:2px 6px; border-radius:20px; margin-top:2px; display:inline-block; }
+  .bgoal-dash-badge.ok        { color:#34c759; background:rgba(52,199,89,.12); }
+  .bgoal-dash-badge.completed { color:#34c759; background:rgba(52,199,89,.12); }
+  .bgoal-dash-badge.warn      { color:#ff9f0a; background:rgba(255,159,10,.12); }
+  .bgoal-dash-badge.over      { color:#ff453a; background:rgba(255,69,58,.12); }
+
+  /* Add budget goal form */
+  .bgoal-add-form { display:flex; flex-direction:column; gap:10px; }
+  .bgoal-add-row  { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+</style>
 </head>
 <body>
 
@@ -41,7 +135,7 @@
   <div class="loading-box">
     <div class="loading-logo">Coin<span>Track</span></div>
     <div class="loading-spinner"></div>
-    <div class="loading-text">Loading your data…</div>
+    <div class="loading-text">Loading…</div>
   </div>
 </div>
 
@@ -79,6 +173,13 @@
           <option value="Shopping">🛍️ Shopping</option>
           <option value="Housing">🏠 Housing / Rent</option>
           <option value="Other">📦 Other</option>
+        </select>
+      </div>
+      <!-- Budget goal selector in modal (shown for money out if goals exist) -->
+      <div class="form-group" id="modal-goal-group" style="display:none">
+        <label for="modal-goal">Link to budget goal (optional)</label>
+        <select id="modal-goal">
+          <option value="">— No specific goal —</option>
         </select>
       </div>
       <div class="modal-actions">
@@ -183,8 +284,14 @@
         <div class="week-grid" id="week-grid"></div>
       </div>
 
+      <!-- Budget Goals on Dashboard -->
+      <div class="card" id="dash-bgoals-card" style="display:none">
+        <div class="card-title">🎯 Budget goals — this month</div>
+        <div id="dash-bgoals-content"></div>
+      </div>
+
       <div class="card" id="dash-goals-card">
-        <div class="card-title">🎯 Monthly goals</div>
+        <div class="card-title">📈 Monthly overview</div>
         <div id="dash-goals-content"></div>
       </div>
 
@@ -228,7 +335,14 @@
             <option value="Other">📦 Other</option>
           </select>
         </div>
-        <button class="btn btn-outline btn-full" onclick="addTx('out')">➖ Record Money Out</button>
+        <!-- Goal link — only shows when budget goals exist -->
+        <div class="goal-link-row" id="out-goal-row" style="display:none">
+          <label for="out-goal">Link to a budget goal (optional)</label>
+          <select id="out-goal">
+            <option value="">— No specific goal —</option>
+          </select>
+        </div>
+        <button class="btn btn-outline btn-full" style="margin-top:12px" onclick="addTx('out')">➖ Record Money Out</button>
       </div>
 
       <div class="section-title" style="margin-top:16px"><span class="dot dot-light"></span>Recent transactions</div>
@@ -302,6 +416,38 @@
 
       <div class="divider"></div>
 
+      <!-- ── BUDGET GOALS ──────────────────────────── -->
+      <div class="section-title"><span class="dot dot-black"></span>Budget goals</div>
+      <p class="habits-sub">Give each spending purpose its own budget. Track exactly what's been used — link expenses when logging money out. 🎯</p>
+
+      <div class="bgoal-list" id="bgoal-list">
+        <!-- rendered dynamically -->
+      </div>
+
+      <div class="card" style="margin-top:4px">
+        <div class="card-title">➕ Add a budget goal</div>
+        <div class="bgoal-add-form">
+          <div class="bgoal-add-row">
+            <div class="form-group" style="margin:0">
+              <label for="bgoal-name">Goal name</label>
+              <input type="text" id="bgoal-name" placeholder="e.g. Rent">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label for="bgoal-icon">Icon (emoji)</label>
+              <input type="text" id="bgoal-icon" placeholder="🏠" maxlength="2">
+            </div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label for="bgoal-budget">Budget amount (KSh)</label>
+            <input type="number" id="bgoal-budget" placeholder="e.g. 8000" inputmode="numeric" min="1">
+          </div>
+          <button class="btn btn-outline btn-full" onclick="addBudgetGoal()">Add budget goal</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- ── HABITS ────────────────────────────────── -->
       <div class="section-title"><span class="dot dot-black"></span>Daily money habits</div>
       <p class="habits-sub">Track good habits. Every day you stick to them builds your streak 🔥</p>
       <div id="habits-list"></div>
@@ -333,6 +479,37 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+
+/* ═══════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════ */
+const el      = id  => document.getElementById(id);
+const fmt     = num => 'KSh ' + Number(num).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const escHtml = s   => s.replace(/[&<>'"]/g, t=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
+
+function todayStr(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dateOffset(n){
+  const d=new Date(); d.setDate(d.getDate()-n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getMonthRange(){
+  const d=new Date(), m=String(d.getMonth()+1).padStart(2,'0');
+  return [`${d.getFullYear()}-${m}-01`,`${d.getFullYear()}-${m}-31`];
+}
+function todayLabel(){ return new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}); }
+function daysInCurrentMonth(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
+function showToast(msg,type='green'){
+  const t=el('toast'); if(!t)return;
+  t.textContent=msg; t.className=`toast show ${type}`;
+  setTimeout(()=>{ t.className='toast'; },3000);
+}
+
+/* ═══════════════════════════════════════════════════
+   FIREBASE INIT
+═══════════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey: "AIzaSyCW6G3J3lBx64xb-wekpDcCSvTpqzVgsjI",
   authDomain: "cointrack4.firebaseapp.com",
@@ -345,431 +522,714 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db   = firebase.firestore();
 const auth = firebase.auth();
-
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Persistence:',e.code));
 
-let currentUser=null,transactions=[],goals={inGoal:0,outGoal:0,saveGoal:0},habits=[],dailyBudget=0,histFilter='all',openDrillCat=null;
-let modalDir='in', modalTargetDate='';
+/* ═══════════════════════════════════════════════════
+   APP STATE
+═══════════════════════════════════════════════════ */
+let currentUser    = null;
+let transactions   = [];
+let goals          = {inGoal:0, outGoal:0, saveGoal:0};
+let habits         = [];
+let budgetGoals    = [];   // ← NEW: budget goals list
+let dailyBudget    = 0;
+let histFilter     = 'all';
+let openDrillCat   = null;
+let modalDir       = 'in';
+let modalTargetDate= '';
 
-const CAT_ICONS={Food:'🍔',Transport:'🚗',Housing:'🏠',Bills:'🧾',Shopping:'🛍️',Entertainment:'🎬',Health:'💊',Savings:'💰',Airtime:'📱',Education:'📚',Clothing:'👗',Other:'📦'};
-const el=id=>document.getElementById(id);
-const fmt=num=>'KSh '+Number(num).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2});
-const escHtml=s=>s.replace(/[&<>'"]/g,t=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
-
-function todayStr(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function dateOffset(n){const d=new Date();d.setDate(d.getDate()-n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function getMonthRange(){const d=new Date(),m=String(d.getMonth()+1).padStart(2,'0');return [`${d.getFullYear()}-${m}-01`,`${d.getFullYear()}-${m}-31`];}
-function todayLabel(){return new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});}
-function daysInCurrentMonth(){const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();}
+const CAT_ICONS = {
+  Food:'🍔', Transport:'🚗', Housing:'🏠', Bills:'🧾',
+  Shopping:'🛍️', Entertainment:'🎬', Health:'💊', Savings:'💰',
+  Airtime:'📱', Education:'📚', Clothing:'👗', Other:'📦'
+};
 
 function getEffectiveDailyBudget(){
-  if(dailyBudget>0)return {amount:dailyBudget,source:'manual'};
-  if(goals.outGoal>0){const days=daysInCurrentMonth();return {amount:goals.outGoal/days,source:'monthly'};}
-  return {amount:0,source:'none'};
+  if(dailyBudget>0) return {amount:dailyBudget, source:'manual'};
+  if(goals.outGoal>0){ const days=daysInCurrentMonth(); return {amount:goals.outGoal/days, source:'monthly'}; }
+  return {amount:0, source:'none'};
 }
 
-function showToast(msg,type='green'){const t=el('toast');if(!t)return;t.textContent=msg;t.className=`toast show ${type}`;setTimeout(()=>{t.className='toast';},3000);}
+/* ── BUDGET GOAL HELPERS ────────────────────────── */
+// Calculate how much has been spent toward a budget goal this month
+function calcGoalSpent(goalId){
+  const [m0,m1] = getMonthRange();
+  return transactions
+    .filter(t => t.dir==='out' && t.goalId===goalId && t.date>=m0 && t.date<=m1)
+    .reduce((s,t) => s+t.amt, 0);
+}
 
-/* ── AUTH ─────────────────────────────────────────── */
+// Determine goal status label + CSS class
+function goalStatus(spent, budget){
+  if(spent >= budget) return {label:'✅ Completed', cls:'completed'};
+  if(spent >= budget * 0.8) return {label:'⚠️ Almost full', cls:'warn'};
+  if(spent > budget) return {label:'🔴 Over budget', cls:'over'};
+  return {label:'🟢 On track', cls:'ok'};
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════ */
 function signInWithGoogle(){
-  const provider=new firebase.auth.GoogleAuthProvider();
-  el('login-error').textContent='';
-  const btn=el('google-signin-btn');
-  btn.disabled=true;
-  btn.innerHTML='<span style="display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#0d0f14;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px"></span>Signing in…';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  el('login-error').textContent = '';
+  const btn = el('google-signin-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#0d0f14;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px"></span>Signing in…';
   auth.signInWithPopup(provider).catch(err=>{
-    btn.disabled=false;
-    btn.innerHTML=`<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
-    if(err.code!=='auth/cancelled-popup-request'&&err.code!=='auth/popup-closed-by-user'){
-      el('login-error').textContent=err.message||'Sign in failed. Please try again.';
+    btn.disabled = false;
+    btn.innerHTML = googleBtnHTML();
+    if(err.code!=='auth/cancelled-popup-request' && err.code!=='auth/popup-closed-by-user'){
+      el('login-error').textContent = err.message || 'Sign in failed. Please try again.';
     }
   });
 }
-function handleSignOut(){closeUserMenu();auth.signOut();}
 
-auth.onAuthStateChanged(user=>{
+function googleBtnHTML(){
+  return `<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;
+}
+
+function handleSignOut(){ closeUserMenu(); auth.signOut(); }
+
+auth.onAuthStateChanged(user => {
   if(user){
-    currentUser=user;
-    el('login-screen').style.display='none';
-    el('loading-screen').style.display='flex';
-    setupUserUI(user);listenToTransactions();listenToSettings();listenToHabits();
-  }else{
-    currentUser=null;
-    el('login-screen').style.display='flex';
-    el('loading-screen').style.display='none';
-    el('app-shell').style.display='none';
-    const btn=el('google-signin-btn');
-    if(btn){btn.disabled=false;btn.innerHTML=`<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`;}
+    currentUser = user;
+    setupUserUI(user);
+    el('loading-screen').style.display = 'none';
+    el('login-screen').style.display   = 'none';
+    el('app-shell').style.display      = 'flex';
+    initApp();
+    listenToTransactions();
+    listenToSettings();
+    listenToHabits();
+    listenToBudgetGoals();   // ← NEW
+  } else {
+    currentUser = null;
+    el('loading-screen').style.display = 'none';
+    el('app-shell').style.display      = 'none';
+    el('login-screen').style.display   = 'flex';
+    const btn = el('google-signin-btn');
+    if(btn){ btn.disabled=false; btn.innerHTML=googleBtnHTML(); }
   }
 });
 
 function setupUserUI(user){
-  if(el('user-menu-name'))el('user-menu-name').textContent=user.displayName||'User';
-  if(el('user-menu-email'))el('user-menu-email').textContent=user.email||'';
-  if(user.photoURL){const img=el('user-photo');if(img){img.src=user.photoURL;img.style.display='block';el('user-initials').style.display='none';}}
-  else{const ini=(user.displayName||user.email||'U').charAt(0).toUpperCase();if(el('user-initials'))el('user-initials').textContent=ini;}
+  if(el('user-menu-name'))  el('user-menu-name').textContent  = user.displayName || 'User';
+  if(el('user-menu-email')) el('user-menu-email').textContent = user.email || '';
+  if(user.photoURL){
+    const img = el('user-photo');
+    if(img){ img.src=user.photoURL; img.style.display='block'; el('user-initials').style.display='none'; }
+  } else {
+    const ini = (user.displayName||user.email||'U').charAt(0).toUpperCase();
+    if(el('user-initials')) el('user-initials').textContent = ini;
+  }
 }
-function toggleUserMenu(){const m=el('user-menu'),b=el('user-menu-backdrop'),open=m.style.display!=='none';m.style.display=open?'none':'block';b.style.display=open?'none':'block';}
-function closeUserMenu(){el('user-menu').style.display='none';el('user-menu-backdrop').style.display='none';}
 
-/* ── FIRESTORE ────────────────────────────────────── */
-function listenToTransactions(){
-  db.collection(`users/${currentUser.uid}/transactions`).orderBy('date','desc').onSnapshot(snap=>{
-    transactions=snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderDash();renderLog();renderSpent();renderHist();renderGoalProgress();
-  });
+function toggleUserMenu(){
+  const m=el('user-menu'), b=el('user-menu-backdrop'), open=m.style.display!=='none';
+  m.style.display=open?'none':'block'; b.style.display=open?'none':'block';
 }
+function closeUserMenu(){
+  el('user-menu').style.display='none'; el('user-menu-backdrop').style.display='none';
+}
+
+/* ═══════════════════════════════════════════════════
+   FIRESTORE LISTENERS
+═══════════════════════════════════════════════════ */
+function listenToTransactions(){
+  db.collection(`users/${currentUser.uid}/transactions`)
+    .orderBy('date','desc')
+    .onSnapshot(snap=>{
+      transactions = snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderDash(); renderLog(); renderSpent(); renderHist(); renderGoalProgress();
+      renderBudgetGoals();   // ← re-render goals whenever transactions change
+    });
+}
+
 function listenToSettings(){
   db.doc(`users/${currentUser.uid}/settings/config`).onSnapshot(snap=>{
-    if(snap.exists){const data=snap.data();goals=data.goals||{inGoal:0,outGoal:0,saveGoal:0};dailyBudget=data.dailyBudget||0;}
-    if(goals.inGoal&&el('goal-in'))el('goal-in').value=goals.inGoal;
-    if(goals.outGoal&&el('goal-out'))el('goal-out').value=goals.outGoal;
-    if(goals.saveGoal&&el('goal-save'))el('goal-save').value=goals.saveGoal;
-    if(dailyBudget&&el('daily-budget-inp'))el('daily-budget-inp').value=dailyBudget;
-    renderDash();renderGoalProgress();
-    el('loading-screen').style.display='none';
-    el('app-shell').style.display='flex';
-    initApp();
+    if(snap.exists){
+      const data = snap.data();
+      goals       = data.goals       || {inGoal:0,outGoal:0,saveGoal:0};
+      dailyBudget = data.dailyBudget || 0;
+    }
+    if(goals.inGoal    && el('goal-in'))          el('goal-in').value          = goals.inGoal;
+    if(goals.outGoal   && el('goal-out'))          el('goal-out').value         = goals.outGoal;
+    if(goals.saveGoal  && el('goal-save'))         el('goal-save').value        = goals.saveGoal;
+    if(dailyBudget     && el('daily-budget-inp'))  el('daily-budget-inp').value = dailyBudget;
+    renderDash(); renderGoalProgress();
   });
 }
+
 function listenToHabits(){
-  db.collection(`users/${currentUser.uid}/habits`).onSnapshot(snap=>{habits=snap.docs.map(d=>({id:d.id,...d.data()}));renderHabits();});
+  db.collection(`users/${currentUser.uid}/habits`).onSnapshot(snap=>{
+    habits = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderHabits();
+  });
 }
 
-/* ── MUTATIONS ────────────────────────────────────── */
+/* ── NEW: Budget Goals Listener ─────────────────── */
+function listenToBudgetGoals(){
+  db.collection(`users/${currentUser.uid}/budgetGoals`)
+    .orderBy('createdAt','asc')
+    .onSnapshot(snap=>{
+      budgetGoals = snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderBudgetGoals();
+      renderDashBudgetGoals();
+      updateGoalSelectors();   // keep dropdowns in sync
+    });
+}
+
+/* ═══════════════════════════════════════════════════
+   MUTATIONS
+═══════════════════════════════════════════════════ */
 async function addTx(dir){
-  if(!currentUser)return;
-  const amtEl=el(dir==='in'?'in-amt':'out-amt'),descEl=el(dir==='in'?'in-desc':'out-desc'),dateEl=el(dir==='in'?'in-date':'out-date'),catEl=el('out-cat');
-  const amt=parseFloat(amtEl.value),desc=descEl.value.trim(),date=dateEl.value||todayStr();
-  if(!amt||amt<=0){showToast('Enter a valid amount','amber');return;}
-  if(!desc){showToast('Add a description','amber');return;}
-  const tx={dir,amt,desc,date,cat:dir==='in'?'Income':(catEl?catEl.value:'Other')};
+  if(!currentUser) return;
+  const amtEl  = el(dir==='in'?'in-amt':'out-amt');
+  const descEl = el(dir==='in'?'in-desc':'out-desc');
+  const dateEl = el(dir==='in'?'in-date':'out-date');
+  const catEl  = el('out-cat');
+  const amt    = parseFloat(amtEl.value);
+  const desc   = descEl.value.trim();
+  const date   = dateEl.value || todayStr();
+  if(!amt||amt<=0){ showToast('Enter a valid amount','amber'); return; }
+  if(!desc)       { showToast('Add a description','amber');   return; }
+
+  const tx = {
+    dir, amt, desc, date,
+    cat: dir==='in' ? 'Income' : (catEl?catEl.value:'Other')
+  };
+
+  // ── Attach goal if selected ──────────────────────
+  if(dir==='out'){
+    const goalSel = el('out-goal');
+    if(goalSel && goalSel.value) tx.goalId = goalSel.value;
+  }
+
   try{
     await db.collection(`users/${currentUser.uid}/transactions`).add(tx);
-    amtEl.value='';descEl.value='';
+    amtEl.value=''; descEl.value='';
+    if(dir==='out' && el('out-goal')) el('out-goal').value='';
     showToast(dir==='in'?'💵 Income recorded!':'➖ Expense recorded!');
-    showPage('dash',document.querySelector('.nav-btn'));
-  }catch(e){showToast('Error saving: '+e.message,'red');}
+    showPage('dash', document.querySelector('.nav-btn'));
+  } catch(e){ showToast('Error saving: '+e.message,'red'); }
 }
 
 async function deleteTx(firebaseId){
-  if(!currentUser)return;
-  try{await db.doc(`users/${currentUser.uid}/transactions/${firebaseId}`).delete();showToast('Deleted','amber');drillCategory('');}
-  catch(e){showToast('Error deleting','red');}
+  if(!currentUser) return;
+  try{
+    await db.doc(`users/${currentUser.uid}/transactions/${firebaseId}`).delete();
+    showToast('Deleted','amber'); drillCategory('');
+  } catch(e){ showToast('Error deleting','red'); }
 }
 
 async function saveDailyBudget(){
-  if(!currentUser)return;
-  const raw=el('daily-budget-inp').value;
+  if(!currentUser) return;
+  const raw = el('daily-budget-inp').value;
   if(!raw||parseFloat(raw)<=0){
-    dailyBudget=0;
+    dailyBudget = 0;
     await db.doc(`users/${currentUser.uid}/settings/config`).set({dailyBudget:0},{merge:true});
     showToast('Override cleared — using monthly limit ÷ 30');
-    renderDash();return;
+    renderDash(); return;
   }
-  const val=parseFloat(raw);
-  dailyBudget=val;
+  dailyBudget = parseFloat(raw);
   await db.doc(`users/${currentUser.uid}/settings/config`).set({dailyBudget},{merge:true});
-  showToast('Daily budget override saved ✓');renderDash();
+  showToast('Daily budget override saved ✓'); renderDash();
 }
 
 async function saveGoals(){
-  if(!currentUser)return;
-  goals={inGoal:parseFloat(el('goal-in').value)||0,outGoal:parseFloat(el('goal-out').value)||0,saveGoal:parseFloat(el('goal-save').value)||0};
+  if(!currentUser) return;
+  goals = {
+    inGoal:   parseFloat(el('goal-in').value)   || 0,
+    outGoal:  parseFloat(el('goal-out').value)  || 0,
+    saveGoal: parseFloat(el('goal-save').value) || 0
+  };
   await db.doc(`users/${currentUser.uid}/settings/config`).set({goals},{merge:true});
-  showToast('Goals saved ✓');renderGoalProgress();renderDash();
+  showToast('Goals saved ✓'); renderGoalProgress(); renderDash();
+}
+
+/* ── NEW: Budget Goal CRUD ─────────────────────── */
+async function addBudgetGoal(){
+  if(!currentUser) return;
+  const name   = el('bgoal-name').value.trim();
+  const icon   = el('bgoal-icon').value.trim() || '🎯';
+  const budget = parseFloat(el('bgoal-budget').value);
+  if(!name)          { showToast('Enter a goal name','amber');   return; }
+  if(!budget||budget<=0){ showToast('Enter a valid budget','amber'); return; }
+  await db.collection(`users/${currentUser.uid}/budgetGoals`).add({
+    name, icon, budget, createdAt: Date.now()
+  });
+  el('bgoal-name').value=''; el('bgoal-icon').value=''; el('bgoal-budget').value='';
+  showToast('Budget goal added ✓');
+}
+
+async function deleteBudgetGoal(id){
+  if(!currentUser) return;
+  await db.doc(`users/${currentUser.uid}/budgetGoals/${id}`).delete();
+  showToast('Goal deleted','amber');
 }
 
 async function addHabit(){
-  if(!currentUser)return;
-  const name=el('habit-name').value.trim(),icon=el('habit-icon').value.trim()||'🎯';
-  if(!name){showToast('Enter a habit name','amber');return;}
+  if(!currentUser) return;
+  const name = el('habit-name').value.trim();
+  const icon = el('habit-icon').value.trim() || '🎯';
+  if(!name){ showToast('Enter a habit name','amber'); return; }
   await db.collection(`users/${currentUser.uid}/habits`).add({name,icon,streak:0,lastDone:''});
-  el('habit-name').value='';el('habit-icon').value='';showToast('Habit added ✓');
-}
-async function toggleHabit(firebaseId){
-  if(!currentUser)return;
-  const habit=habits.find(h=>h.id===firebaseId);if(!habit)return;
-  const today=todayStr(),doneToday=habit.lastDone===today;
-  const newStreak=doneToday?Math.max(0,(habit.streak||0)-1):(habit.streak||0)+1;
-  await db.doc(`users/${currentUser.uid}/habits/${firebaseId}`).update({streak:newStreak,lastDone:doneToday?'':today});
-}
-async function deleteHabit(firebaseId){
-  if(!currentUser)return;
-  await db.doc(`users/${currentUser.uid}/habits/${firebaseId}`).delete();showToast('Habit deleted','amber');
+  el('habit-name').value=''; el('habit-icon').value=''; showToast('Habit added ✓');
 }
 
-/* ── DAY MODAL ────────────────────────────────────── */
+async function toggleHabit(firebaseId){
+  if(!currentUser) return;
+  const habit = habits.find(h=>h.id===firebaseId); if(!habit) return;
+  const today    = todayStr();
+  const doneToday= habit.lastDone===today;
+  const newStreak= doneToday ? Math.max(0,(habit.streak||0)-1) : (habit.streak||0)+1;
+  await db.doc(`users/${currentUser.uid}/habits/${firebaseId}`).update({streak:newStreak, lastDone:doneToday?'':today});
+}
+
+async function deleteHabit(firebaseId){
+  if(!currentUser) return;
+  await db.doc(`users/${currentUser.uid}/habits/${firebaseId}`).delete();
+  showToast('Habit deleted','amber');
+}
+
+/* ═══════════════════════════════════════════════════
+   DAY MODAL
+═══════════════════════════════════════════════════ */
 function openDayModal(dateStr){
-  modalTargetDate=dateStr;modalDir='in';
-  el('modal-amt').value='';el('modal-desc').value='';el('modal-cat').value='Food';
+  modalTargetDate = dateStr; modalDir = 'in';
+  el('modal-amt').value=''; el('modal-desc').value=''; el('modal-cat').value='Food';
   el('modal-cat-group').style.display='none';
+  if(el('modal-goal-group')) el('modal-goal-group').style.display='none';
   el('modal-tab-in').className='modal-tab active-in';
   el('modal-tab-out').className='modal-tab';
   el('modal-save-btn').className='modal-save';
-  const d=new Date(dateStr+'T00:00:00');
-  el('modal-date-badge').textContent='📅 '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  el('day-modal').style.display='block';document.body.style.overflow='hidden';
-  setTimeout(()=>el('modal-amt').focus(),300);
+  const d = new Date(dateStr+'T00:00:00');
+  el('modal-date-badge').textContent = '📅 '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  el('day-modal').style.display='block'; document.body.style.overflow='hidden';
+  setTimeout(()=>el('modal-amt').focus(), 300);
 }
 function closeDayModal(e){
-  if(e&&e.target!==e.currentTarget)return;
-  el('day-modal').style.display='none';document.body.style.overflow='';
+  if(e && e.target!==e.currentTarget) return;
+  el('day-modal').style.display='none'; document.body.style.overflow='';
 }
 function setModalDir(dir){
-  modalDir=dir;
-  el('modal-tab-in').className='modal-tab'+(dir==='in'?' active-in':'');
-  el('modal-tab-out').className='modal-tab'+(dir==='out'?' active-out':'');
-  el('modal-cat-group').style.display=dir==='out'?'block':'none';
-  el('modal-save-btn').className='modal-save'+(dir==='out'?' modal-save-out':'');
+  modalDir = dir;
+  el('modal-tab-in').className  = 'modal-tab'+(dir==='in' ?' active-in':'');
+  el('modal-tab-out').className = 'modal-tab'+(dir==='out'?' active-out':'');
+  el('modal-cat-group').style.display = dir==='out'?'block':'none';
+  el('modal-save-btn').className = 'modal-save'+(dir==='out'?' modal-save-out':'');
+  // Show goal selector in modal if goals exist and this is money out
+  const mgGroup = el('modal-goal-group');
+  if(mgGroup) mgGroup.style.display = (dir==='out' && budgetGoals.length>0) ? 'block' : 'none';
 }
 async function saveModalTx(){
-  if(!currentUser)return;
-  const amt=parseFloat(el('modal-amt').value),desc=el('modal-desc').value.trim();
-  if(!amt||amt<=0){showToast('Enter a valid amount','amber');return;}
-  if(!desc){showToast('Add a description','amber');return;}
-  const cat=modalDir==='in'?'Income':el('modal-cat').value;
+  if(!currentUser) return;
+  const amt  = parseFloat(el('modal-amt').value);
+  const desc = el('modal-desc').value.trim();
+  if(!amt||amt<=0){ showToast('Enter a valid amount','amber'); return; }
+  if(!desc)       { showToast('Add a description','amber');   return; }
+  const cat = modalDir==='in' ? 'Income' : el('modal-cat').value;
+  const tx  = {dir:modalDir, amt, desc, date:modalTargetDate, cat};
+
+  // Attach goal if selected
+  if(modalDir==='out'){
+    const mg = el('modal-goal');
+    if(mg && mg.value) tx.goalId = mg.value;
+  }
+
   try{
-    await db.collection(`users/${currentUser.uid}/transactions`).add({dir:modalDir,amt,desc,date:modalTargetDate,cat});
-    el('day-modal').style.display='none';document.body.style.overflow='';
-    showToast(modalDir==='in'?'💵 Income added to '+modalTargetDate:'➖ Expense added to '+modalTargetDate);
-  }catch(e){showToast('Error saving: '+e.message,'red');}
+    await db.collection(`users/${currentUser.uid}/transactions`).add(tx);
+    el('day-modal').style.display='none'; document.body.style.overflow='';
+    showToast(modalDir==='in' ? '💵 Income added to '+modalTargetDate : '➖ Expense added to '+modalTargetDate);
+  } catch(e){ showToast('Error saving: '+e.message,'red'); }
 }
 
-/* ── NAV ──────────────────────────────────────────── */
-function showPage(name,btn){
+/* ── Keep goal dropdowns populated ─────────────── */
+function updateGoalSelectors(){
+  const opts = budgetGoals.length
+    ? '<option value="">— No specific goal —</option>' +
+      budgetGoals.map(g=>`<option value="${g.id}">${g.icon} ${escHtml(g.name)} (${fmt(g.budget)})</option>`).join('')
+    : '<option value="">— No goals set yet —</option>';
+
+  // Log page selector
+  const outGoalSel = el('out-goal');
+  if(outGoalSel) outGoalSel.innerHTML = opts;
+  const outGoalRow = el('out-goal-row');
+  if(outGoalRow) outGoalRow.style.display = budgetGoals.length>0 ? 'block' : 'none';
+
+  // Modal selector
+  const modalGoalSel = el('modal-goal');
+  if(modalGoalSel) modalGoalSel.innerHTML = opts;
+}
+
+/* ═══════════════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════════════ */
+function showPage(name, btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const page=el(`page-${name}`);if(page)page.classList.add('active');
-  if(btn)btn.classList.add('active');
-  if(name==='spent')renderSpent();
-  if(name==='hist')renderHist();
-  if(name==='goals'){renderGoalProgress();renderHabits();}
+  const page = el(`page-${name}`); if(page) page.classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name==='spent') renderSpent();
+  if(name==='hist')  renderHist();
+  if(name==='goals'){ renderGoalProgress(); renderHabits(); renderBudgetGoals(); }
 }
 
-/* ── RENDER: DASHBOARD ────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   RENDER: DASHBOARD
+═══════════════════════════════════════════════════ */
 function renderDash(){
-  const today=todayStr(),[m0,m1]=getMonthRange();
-  const tIn=transactions.filter(t=>t.dir==='in'&&t.date===today).reduce((s,t)=>s+t.amt,0);
-  const tOut=transactions.filter(t=>t.dir==='out'&&t.date===today).reduce((s,t)=>s+t.amt,0);
-  const mIn=transactions.filter(t=>t.dir==='in'&&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
-  const mOut=transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
-  const allIn=transactions.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
-  const allOut=transactions.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
-  const bal=allIn-allOut;
-  const balEl=el('dash-bal');
-  if(balEl){balEl.textContent=fmt(bal);balEl.className=`balance-amount${bal<0?' neg':bal===0?' zero':''}`;}
-  const sub=el('dash-balance-sub');
-  if(sub)sub.textContent=bal===0?'Log your first transaction below':bal<0?'Spending exceeds income':'Looking good! 💚';
-  const hb=el('header-balance');if(hb){hb.textContent=fmt(bal);hb.className=`header-bal-num${bal<0?' neg':''}`;}
-  if(el('dash-today-in'))el('dash-today-in').textContent=fmt(tIn);
-  if(el('dash-today-out'))el('dash-today-out').textContent=fmt(tOut);
-  if(el('dash-month-in'))el('dash-month-in').textContent=fmt(mIn);
-  if(el('dash-month-out'))el('dash-month-out').textContent=fmt(mOut);
-  if(el('dash-total-in'))el('dash-total-in').textContent=fmt(allIn);
-  if(el('dash-total-out'))el('dash-total-out').textContent=fmt(allOut);
-  renderRing(tOut);if(el('week-grid'))renderWeekBars();
-  if(el('dash-goals-content'))renderDashGoals(mIn,mOut);
-  if(el('dash-insights'))renderInsights(tOut,mIn,mOut,bal);
+  const today=todayStr(), [m0,m1]=getMonthRange();
+  const tIn  = transactions.filter(t=>t.dir==='in' &&t.date===today).reduce((s,t)=>s+t.amt,0);
+  const tOut = transactions.filter(t=>t.dir==='out'&&t.date===today).reduce((s,t)=>s+t.amt,0);
+  const mIn  = transactions.filter(t=>t.dir==='in' &&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
+  const mOut = transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
+  const allIn  = transactions.filter(t=>t.dir==='in' ).reduce((s,t)=>s+t.amt,0);
+  const allOut = transactions.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
+  const bal = allIn - allOut;
+
+  const balEl = el('dash-bal');
+  if(balEl){ balEl.textContent=fmt(bal); balEl.className=`balance-amount${bal<0?' neg':bal===0?' zero':''}`; }
+  const sub = el('dash-balance-sub');
+  if(sub) sub.textContent = bal===0?'Log your first transaction below':bal<0?'Spending exceeds income':'Looking good! 💚';
+  const hb = el('header-balance');
+  if(hb){ hb.textContent=fmt(bal); hb.className=`header-bal-num${bal<0?' neg':''}`; }
+
+  if(el('dash-today-in'))  el('dash-today-in').textContent  = fmt(tIn);
+  if(el('dash-today-out')) el('dash-today-out').textContent = fmt(tOut);
+  if(el('dash-month-in'))  el('dash-month-in').textContent  = fmt(mIn);
+  if(el('dash-month-out')) el('dash-month-out').textContent = fmt(mOut);
+  if(el('dash-total-in'))  el('dash-total-in').textContent  = fmt(allIn);
+  if(el('dash-total-out')) el('dash-total-out').textContent = fmt(allOut);
+
+  renderRing(tOut);
+  if(el('week-grid'))          renderWeekBars();
+  if(el('dash-goals-content')) renderDashGoals(mIn,mOut);
+  if(el('dash-insights'))      renderInsights(tOut,mIn,mOut,bal);
+  renderDashBudgetGoals();
+}
+
+/* ── NEW: Dashboard Budget Goals Card ──────────── */
+function renderDashBudgetGoals(){
+  const card    = el('dash-bgoals-card');
+  const content = el('dash-bgoals-content');
+  if(!card||!content) return;
+  if(!budgetGoals.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  content.innerHTML = budgetGoals.map(g=>{
+    const spent   = calcGoalSpent(g.id);
+    const pct     = Math.min(spent / g.budget, 1);
+    const pctW    = Math.round(pct * 100);
+    const remain  = g.budget - spent;
+    const {label, cls} = goalStatus(spent, g.budget);
+    return `
+      <div class="bgoal-dash-item">
+        <div class="bgoal-dash-icon">${g.icon}</div>
+        <div class="bgoal-dash-info">
+          <div class="bgoal-dash-name">${escHtml(g.name)}</div>
+          <div class="bgoal-dash-track">
+            <div class="bgoal-dash-fill ${cls}" style="width:${pctW}%"></div>
+          </div>
+        </div>
+        <div class="bgoal-dash-right">
+          <div class="bgoal-dash-spent">${fmt(spent)}</div>
+          <div class="bgoal-dash-badge ${cls}">${label}</div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function renderRing(tOut){
-  const ringProgress=el('ring-progress'),ringPct=el('ring-pct'),ringSpent=el('ring-spent'),ringRemain=el('ring-remain'),ringBudLbl=el('ring-budget-label'),ringNote=el('ring-source-note');
-  if(!ringProgress||!ringPct)return;
-  const {amount:effBudget,source}=getEffectiveDailyBudget();
-  if(effBudget>0){
-    const pct=Math.min(tOut/effBudget,1),circ=2*Math.PI*38,dash=pct*circ,remain=effBudget-tOut;
-    ringProgress.style.strokeDasharray=`${dash} ${circ}`;
-    ringProgress.style.stroke=remain<0?'var(--red)':remain<=effBudget*0.2?'var(--amber)':'var(--green)';
-    ringPct.textContent=`${Math.round(pct*100)}%`;
-    if(ringSpent)ringSpent.textContent=fmt(tOut);
-    if(ringRemain){ringRemain.textContent=remain<0?`${fmt(Math.abs(remain))} over budget!`:remain===0?'Budget used up':`${fmt(remain)} left`;ringRemain.className=`ring-info-remain ${remain<0?'over':remain<=effBudget*0.2?'warn':'ok'}`;}
-    if(ringBudLbl)ringBudLbl.textContent=`Daily budget: ${fmt(effBudget)}`;
-    if(ringNote){
-      if(source==='monthly'){ringNote.style.display='block';ringNote.textContent=`📐 Calculated from your monthly limit: ${fmt(goals.outGoal)} ÷ ${daysInCurrentMonth()} days = ${fmt(effBudget)}/day`;}
-      else if(source==='manual'){ringNote.style.display='block';ringNote.textContent=`✏️ Manual override active. Remove it to use monthly limit ÷ 30 instead.`;}
-      else{ringNote.style.display='none';}
+  const rp=el('ring-progress'),rPct=el('ring-pct'),rSpent=el('ring-spent'),
+        rRemain=el('ring-remain'),rBud=el('ring-budget-label'),rNote=el('ring-source-note');
+  if(!rp||!rPct) return;
+  const {amount:eff, source} = getEffectiveDailyBudget();
+  if(eff>0){
+    const pct=Math.min(tOut/eff,1), circ=2*Math.PI*38, dash=pct*circ, remain=eff-tOut;
+    rp.style.strokeDasharray = `${dash} ${circ}`;
+    rp.style.stroke = remain<0?'var(--red)':remain<=eff*0.2?'var(--amber)':'var(--green)';
+    rPct.textContent = `${Math.round(pct*100)}%`;
+    if(rSpent)  rSpent.textContent  = fmt(tOut);
+    if(rRemain){
+      rRemain.textContent = remain<0?`${fmt(Math.abs(remain))} over budget!`:remain===0?'Budget used up':`${fmt(remain)} left`;
+      rRemain.className   = `ring-info-remain ${remain<0?'over':remain<=eff*0.2?'warn':'ok'}`;
     }
-  }else{
-    ringProgress.style.strokeDasharray='0 239';ringPct.textContent='0%';
-    if(ringSpent)ringSpent.textContent=fmt(tOut);
-    if(ringRemain){ringRemain.textContent='Set a monthly limit in Goals →';ringRemain.className='ring-info-remain';}
-    if(ringBudLbl)ringBudLbl.textContent='';
-    if(ringNote)ringNote.style.display='none';
+    if(rBud) rBud.textContent = `Daily budget: ${fmt(eff)}`;
+    if(rNote){
+      if(source==='monthly'){ rNote.style.display='block'; rNote.textContent=`📐 Calculated from your monthly limit: ${fmt(goals.outGoal)} ÷ ${daysInCurrentMonth()} days = ${fmt(eff)}/day`; }
+      else if(source==='manual'){ rNote.style.display='block'; rNote.textContent=`✏️ Manual override active. Remove it to use monthly limit ÷ 30 instead.`; }
+      else { rNote.style.display='none'; }
+    }
+  } else {
+    rp.style.strokeDasharray='0 239'; rPct.textContent='0%';
+    if(rSpent)  rSpent.textContent  = fmt(tOut);
+    if(rRemain){ rRemain.textContent='Set a monthly limit in Goals →'; rRemain.className='ring-info-remain'; }
+    if(rBud)  rBud.textContent  = '';
+    if(rNote) rNote.style.display='none';
   }
 }
 
 function renderWeekBars(){
-  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];let html='';
-  const {amount:effBudget}=getEffectiveDailyBudget();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html='';
+  const {amount:eff} = getEffectiveDailyBudget();
   for(let i=6;i>=0;i--){
-    const dateStr=dateOffset(i),d=new Date(dateStr+'T00:00:00'),dayName=i===0?'Today':days[d.getDay()];
-    const spent=transactions.filter(t=>t.dir==='out'&&t.date===dateStr).reduce((s,t)=>s+t.amt,0);
-    const pct=effBudget>0?Math.min(spent/effBudget,1):spent>0?0.3:0;
-    const cls=effBudget===0?spent>0?'safe':'none':pct>=1?'over':pct>=0.8?'warn':spent>0?'safe':'none';
-    html+=`<div class="week-row${i===0?' today-row':''}"><span class="week-day-label">${dayName}</span><div class="week-bar-track"><div class="week-bar-fill ${cls}" style="width:${Math.round(pct*100)}%"></div></div><span class="week-amount">${spent>0?fmt(spent):'–'}</span></div>`;
+    const dateStr=dateOffset(i), d=new Date(dateStr+'T00:00:00'), dayName=i===0?'Today':days[d.getDay()];
+    const spent = transactions.filter(t=>t.dir==='out'&&t.date===dateStr).reduce((s,t)=>s+t.amt,0);
+    const pct   = eff>0?Math.min(spent/eff,1):spent>0?0.3:0;
+    const cls   = eff===0?spent>0?'safe':'none':pct>=1?'over':pct>=0.8?'warn':spent>0?'safe':'none';
+    html += `<div class="week-row${i===0?' today-row':''}"><span class="week-day-label">${dayName}</span><div class="week-bar-track"><div class="week-bar-fill ${cls}" style="width:${Math.round(pct*100)}%"></div></div><span class="week-amount">${spent>0?fmt(spent):'–'}</span></div>`;
   }
-  el('week-grid').innerHTML=html;
+  el('week-grid').innerHTML = html;
 }
 
 function renderDashGoals(mIn,mOut){
-  const gc=el('dash-goals-content');if(!gc)return;
-  if(!goals.inGoal&&!goals.outGoal){gc.innerHTML='<p style="font-size:13px;color:var(--txt3)">Set monthly goals in the Goals tab →</p>';return;}
+  const gc=el('dash-goals-content'); if(!gc) return;
+  if(!goals.inGoal&&!goals.outGoal){ gc.innerHTML='<p style="font-size:13px;color:var(--txt3)">Set monthly goals in the Goals tab →</p>'; return; }
   let html='';
-  if(goals.inGoal)html+=buildProgBar('Monthly Income',mIn,goals.inGoal,false);
-  if(goals.outGoal)html+=buildProgBar('Monthly Spending',mOut,goals.outGoal,true);
-  gc.innerHTML=html;
+  if(goals.inGoal)  html += buildProgBar('Monthly Income',  mIn,  goals.inGoal,  false);
+  if(goals.outGoal) html += buildProgBar('Monthly Spending',mOut, goals.outGoal, true);
+  gc.innerHTML = html;
 }
 
 function buildProgBar(label,current,goal,invert){
-  const pct=Math.min(current/goal,1),pctW=Math.round(pct*100),over=invert&&pct>=1,warn=invert&&pct>=0.8&&pct<1,ok=invert?pct<0.8:pct>=1;
-  const cls=over?'red':warn?'amber':ok?'green':'blue';
-  const note=over?'Over limit!':warn?'Getting close':`${pctW}% — ${fmt(Math.abs(goal-current))} ${current<goal?'to go':'achieved'}`;
+  const pct=Math.min(current/goal,1), pctW=Math.round(pct*100);
+  const over=invert&&pct>=1, warn=invert&&pct>=0.8&&pct<1, ok=invert?pct<0.8:pct>=1;
+  const cls  = over?'red':warn?'amber':ok?'green':'blue';
+  const note = over?'Over limit!':warn?'Getting close':`${pctW}% — ${fmt(Math.abs(goal-current))} ${current<goal?'to go':'achieved'}`;
   return `<div class="prog-wrap"><div class="prog-labels"><span class="prog-l">${label}</span><span class="prog-r">${fmt(current)} / ${fmt(goal)}</span></div><div class="prog-track"><div class="prog-fill ${cls}" style="width:${pctW}%"></div></div><div class="prog-note ${over?'over':warn?'warn':'ok'}">${note}</div></div>`;
 }
 
 function renderInsights(tOut,mIn,mOut,bal){
-  const[m0,m1]=getMonthRange(),items=[],catTotals={};
-  transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).forEach(t=>{catTotals[t.cat]=(catTotals[t.cat]||0)+t.amt;});
-  const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
-  const {amount:effBudget}=getEffectiveDailyBudget();
-  if(topCat)items.push({cls:'amber',icon:'💡',title:'Biggest spend category',text:`You spent the most on <strong>${topCat[0]}</strong> this month — ${fmt(topCat[1])}.`});
-  if(effBudget>0&&tOut>effBudget)items.push({cls:'red',icon:'⚠️',title:'Over daily budget today',text:`Spent ${fmt(tOut)} — ${fmt(tOut-effBudget)} over your ${fmt(effBudget)} daily limit.`});
-  if(bal<0)items.push({cls:'red',icon:'📉',title:'Balance is negative',text:'More spending than income recorded. Log missing income or reduce expenses.'});
-  if(goals.outGoal>0&&mOut<goals.outGoal*0.8&&mOut>0)items.push({cls:'green',icon:'✅',title:'On track with spending',text:`Spent ${fmt(mOut)} of ${fmt(goals.outGoal)} limit — ${fmt(goals.outGoal-mOut)} headroom left.`});
-  if(goals.outGoal>0&&mOut>=goals.outGoal*0.8&&mOut<goals.outGoal)items.push({cls:'amber',icon:'🔔',title:'Approaching spending limit',text:`Used ${Math.round(mOut/goals.outGoal*100)}% of monthly limit. Only ${fmt(goals.outGoal-mOut)} left.`});
-  el('dash-insights').innerHTML=items.map(i=>`<div class="insight-card ${i.cls}"><div class="insight-icon">${i.icon}</div><div class="insight-body"><div class="insight-title">${i.title}</div><div class="insight-text">${i.text}</div></div></div>`).join('');
+  const [m0,m1]=getMonthRange(), items=[], catTotals={};
+  transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).forEach(t=>{ catTotals[t.cat]=(catTotals[t.cat]||0)+t.amt; });
+  const topCat = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+  const {amount:eff} = getEffectiveDailyBudget();
+  if(topCat) items.push({cls:'amber',icon:'💡',title:'Biggest spend category',text:`You spent the most on <strong>${topCat[0]}</strong> this month — ${fmt(topCat[1])}.`});
+  if(eff>0&&tOut>eff) items.push({cls:'red',icon:'⚠️',title:'Over daily budget today',text:`Spent ${fmt(tOut)} — ${fmt(tOut-eff)} over your ${fmt(eff)} daily limit.`});
+  if(bal<0) items.push({cls:'red',icon:'📉',title:'Balance is negative',text:'More spending than income recorded. Log missing income or reduce expenses.'});
+  if(goals.outGoal>0&&mOut<goals.outGoal*0.8&&mOut>0) items.push({cls:'green',icon:'✅',title:'On track with spending',text:`Spent ${fmt(mOut)} of ${fmt(goals.outGoal)} limit — ${fmt(goals.outGoal-mOut)} headroom left.`});
+  if(goals.outGoal>0&&mOut>=goals.outGoal*0.8&&mOut<goals.outGoal) items.push({cls:'amber',icon:'🔔',title:'Approaching spending limit',text:`Used ${Math.round(mOut/goals.outGoal*100)}% of monthly limit. Only ${fmt(goals.outGoal-mOut)} left.`});
+
+  // ── Budget goal warnings ──────────────────────────
+  budgetGoals.forEach(g=>{
+    const spent = calcGoalSpent(g.id);
+    if(spent >= g.budget) items.push({cls:'green',icon:g.icon,title:`${g.name} goal complete`,text:`You've hit your ${fmt(g.budget)} budget for ${g.name} this month. ✅`});
+    else if(spent >= g.budget * 0.8) items.push({cls:'amber',icon:g.icon,title:`${g.name} almost full`,text:`Used ${Math.round(spent/g.budget*100)}% of ${g.name} budget — only ${fmt(g.budget-spent)} left.`});
+  });
+
+  el('dash-insights').innerHTML = items.map(i=>`<div class="insight-card ${i.cls}"><div class="insight-icon">${i.icon}</div><div class="insight-body"><div class="insight-title">${i.title}</div><div class="insight-text">${i.text}</div></div></div>`).join('');
 }
 
-/* ── RENDER: LOG ──────────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   RENDER: LOG
+═══════════════════════════════════════════════════ */
 function renderLog(){
-  const recEl=el('log-recent');if(!recEl)return;
-  const recent=transactions.slice(0,7);
-  if(!recent.length){recEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🧾</div><div class="empty-state-title">No transactions yet</div><div class="empty-state-sub">Use the forms above to record money in or out</div></div>`;return;}
-  recEl.innerHTML=recent.map(t=>txItemHTML(t,true)).join('');
+  const recEl=el('log-recent'); if(!recEl) return;
+  const recent = transactions.slice(0,7);
+  if(!recent.length){ recEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🧾</div><div class="empty-state-title">No transactions yet</div><div class="empty-state-sub">Use the forms above to record money in or out</div></div>`; return; }
+  recEl.innerHTML = recent.map(t=>txItemHTML(t,true)).join('');
 }
 
-function txItemHTML(t,showDel=false){
-  const icon=t.dir==='in'?'💵':(CAT_ICONS[t.cat]||'📦');
-  const delBtn=showDel?`<button class="tx-del" onclick="deleteTx('${t.id}')">🗑️</button>`:'';
-  return `<div class="tx-item ${t.dir}"><div class="tx-icon ${t.dir}">${icon}</div><div class="tx-body"><div class="tx-desc">${escHtml(t.desc)}</div><div class="tx-meta">${t.date}<span class="tx-cat-pill">${t.cat||'Income'}</span></div></div><div class="tx-amount ${t.dir}">${t.dir==='in'?'+':'-'}${fmt(t.amt)}</div>${delBtn}</div>`;
+function txItemHTML(t, showDel=false){
+  const icon   = t.dir==='in'?'💵':(CAT_ICONS[t.cat]||'📦');
+  const delBtn = showDel?`<button class="tx-del" onclick="deleteTx('${t.id}')">🗑️</button>`:'';
+  // Show goal pill if transaction is linked to a goal
+  const linkedGoal = t.goalId ? budgetGoals.find(g=>g.id===t.goalId) : null;
+  const goalPill   = linkedGoal ? `<span class="tx-cat-pill" style="background:rgba(52,199,89,.15);color:#34c759">${linkedGoal.icon} ${escHtml(linkedGoal.name)}</span>` : '';
+  return `<div class="tx-item ${t.dir}"><div class="tx-icon ${t.dir}">${icon}</div><div class="tx-body"><div class="tx-desc">${escHtml(t.desc)}</div><div class="tx-meta">${t.date}<span class="tx-cat-pill">${t.cat||'Income'}</span>${goalPill}</div></div><div class="tx-amount ${t.dir}">${t.dir==='in'?'+':'-'}${fmt(t.amt)}</div>${delBtn}</div>`;
 }
 
-/* ── RENDER: SPENT ────────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   RENDER: SPENT
+═══════════════════════════════════════════════════ */
 function renderSpent(){
-  if(!el('sp-metrics'))return;
-  const from=el('sp-from').value||getMonthRange()[0],to=el('sp-to').value||getMonthRange()[1];
-  const filtered=transactions.filter(t=>t.date>=from&&t.date<=to);
-  const incomeAmt=filtered.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
-  const spentAmt=filtered.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
-  const netAmt=incomeAmt-spentAmt,spentCount=filtered.filter(t=>t.dir==='out').length;
-  el('sp-metrics').innerHTML=`<div class="metric"><div class="metric-label">Total in</div><div class="metric-value" style="color:var(--green)">${fmt(incomeAmt)}</div></div><div class="metric"><div class="metric-label">Total out</div><div class="metric-value" style="color:var(--red)">${fmt(spentAmt)}</div></div><div class="metric"><div class="metric-label">Net</div><div class="metric-value" style="color:${netAmt>=0?'var(--green)':'var(--red)'}">${fmt(netAmt)}</div></div><div class="metric"><div class="metric-label">Purchases</div><div class="metric-value" style="color:var(--blue)">${spentCount}</div></div>`;
-  const cats={};
-  filtered.filter(t=>t.dir==='out').forEach(t=>{if(!cats[t.cat])cats[t.cat]={amt:0,items:[]};cats[t.cat].amt+=t.amt;cats[t.cat].items.push(t);});
-  const sorted=Object.entries(cats).sort((a,b)=>b[1].amt-a[1].amt);
-  const maxAmt=sorted.length?sorted[0][1].amt:1;
-  const catGrid=el('sp-cats');
-  if(!sorted.length){catGrid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📂</div><div class="empty-state-title">No spending in this period</div></div>`;return;}
-  catGrid.innerHTML=sorted.map(([cat,data])=>{const pct=Math.round(data.amt/maxAmt*100);return `<div class="cat-card" onclick="drillCategory('${cat}')"><span class="cat-icon">${CAT_ICONS[cat]||'📦'}</span><div class="cat-name">${cat}</div><div class="cat-amt">${fmt(data.amt)}</div><div class="cat-count">${data.items.length} purchase${data.items.length!==1?'s':''}</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${pct}%"></div></div></div>`;}).join('');
+  if(!el('sp-metrics')) return;
+  const from=el('sp-from').value||getMonthRange()[0], to=el('sp-to').value||getMonthRange()[1];
+  const filtered   = transactions.filter(t=>t.date>=from&&t.date<=to);
+  const incomeAmt  = filtered.filter(t=>t.dir==='in' ).reduce((s,t)=>s+t.amt,0);
+  const spentAmt   = filtered.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
+  const netAmt     = incomeAmt-spentAmt;
+  const spentCount = filtered.filter(t=>t.dir==='out').length;
+  el('sp-metrics').innerHTML = `<div class="metric"><div class="metric-label">Total in</div><div class="metric-value" style="color:var(--green)">${fmt(incomeAmt)}</div></div><div class="metric"><div class="metric-label">Total out</div><div class="metric-value" style="color:var(--red)">${fmt(spentAmt)}</div></div><div class="metric"><div class="metric-label">Net</div><div class="metric-value" style="color:${netAmt>=0?'var(--green)':'var(--red)'}">${fmt(netAmt)}</div></div><div class="metric"><div class="metric-label">Purchases</div><div class="metric-value" style="color:var(--blue)">${spentCount}</div></div>`;
+  const cats = {};
+  filtered.filter(t=>t.dir==='out').forEach(t=>{ if(!cats[t.cat]) cats[t.cat]={amt:0,items:[]}; cats[t.cat].amt+=t.amt; cats[t.cat].items.push(t); });
+  const sorted = Object.entries(cats).sort((a,b)=>b[1].amt-a[1].amt);
+  const maxAmt = sorted.length ? sorted[0][1].amt : 1;
+  const catGrid = el('sp-cats');
+  if(!sorted.length){ catGrid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📂</div><div class="empty-state-title">No spending in this period</div></div>`; return; }
+  catGrid.innerHTML = sorted.map(([cat,data])=>{
+    const pct=Math.round(data.amt/maxAmt*100);
+    return `<div class="cat-card" onclick="drillCategory('${cat}')"><span class="cat-icon">${CAT_ICONS[cat]||'📦'}</span><div class="cat-name">${cat}</div><div class="cat-amt">${fmt(data.amt)}</div><div class="cat-count">${data.items.length} purchase${data.items.length!==1?'s':''}</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${pct}%"></div></div></div>`;
+  }).join('');
 }
 
 function drillCategory(cat){
-  const drillEl=el('drill-panel');if(!drillEl)return;
-  if(!cat){drillEl.classList.remove('open');openDrillCat=null;return;}
-  const from=el('sp-from').value||getMonthRange()[0],to=el('sp-to').value||getMonthRange()[1];
-  if(openDrillCat===cat&&drillEl.classList.contains('open')){drillEl.classList.remove('open');openDrillCat=null;return;}
-  openDrillCat=cat;
-  const items=transactions.filter(t=>t.dir==='out'&&t.cat===cat&&t.date>=from&&t.date<=to);
-  el('drill-title').textContent=`${CAT_ICONS[cat]||'📦'} ${cat} — ${items.length} purchase${items.length!==1?'s':''}`;
-  el('drill-list').innerHTML=items.length?items.map(t=>`<div class="tx-item out"><div class="tx-icon out">${CAT_ICONS[t.cat]||'📦'}</div><div class="tx-body"><div class="tx-desc">${escHtml(t.desc)}</div><div class="tx-meta">${t.date}</div></div><div class="tx-amount out">${fmt(t.amt)}</div><button class="tx-del" onclick="deleteTx('${t.id}')">🗑️</button></div>`).join(''):`<p style="font-size:13px;color:var(--txt3);text-align:center;padding:12px">No items found</p>`;
+  const drillEl=el('drill-panel'); if(!drillEl) return;
+  if(!cat){ drillEl.classList.remove('open'); openDrillCat=null; return; }
+  const from=el('sp-from').value||getMonthRange()[0], to=el('sp-to').value||getMonthRange()[1];
+  if(openDrillCat===cat&&drillEl.classList.contains('open')){ drillEl.classList.remove('open'); openDrillCat=null; return; }
+  openDrillCat = cat;
+  const items = transactions.filter(t=>t.dir==='out'&&t.cat===cat&&t.date>=from&&t.date<=to);
+  el('drill-title').textContent = `${CAT_ICONS[cat]||'📦'} ${cat} — ${items.length} purchase${items.length!==1?'s':''}`;
+  el('drill-list').innerHTML = items.length
+    ? items.map(t=>`<div class="tx-item out"><div class="tx-icon out">${CAT_ICONS[t.cat]||'📦'}</div><div class="tx-body"><div class="tx-desc">${escHtml(t.desc)}</div><div class="tx-meta">${t.date}</div></div><div class="tx-amount out">${fmt(t.amt)}</div><button class="tx-del" onclick="deleteTx('${t.id}')">🗑️</button></div>`).join('')
+    : `<p style="font-size:13px;color:var(--txt3);text-align:center;padding:12px">No items found</p>`;
   drillEl.classList.add('open');
 }
 
-/* ── RENDER: HISTORY ──────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   RENDER: HISTORY
+═══════════════════════════════════════════════════ */
 function renderHist(){
-  if(!el('h-from'))return;
-  const from=el('h-from').value||todayStr(),to=el('h-to').value||todayStr();
-  let filtered=transactions.filter(t=>t.date>=from&&t.date<=to);
-  if(histFilter==='in')filtered=filtered.filter(t=>t.dir==='in');
-  else if(histFilter==='out')filtered=filtered.filter(t=>t.dir==='out');
-  else if(histFilter!=='all')filtered=filtered.filter(t=>t.cat===histFilter);
+  if(!el('h-from')) return;
+  const from=el('h-from').value||todayStr(), to=el('h-to').value||todayStr();
+  let filtered = transactions.filter(t=>t.date>=from&&t.date<=to);
+  if(histFilter==='in')        filtered=filtered.filter(t=>t.dir==='in');
+  else if(histFilter==='out')  filtered=filtered.filter(t=>t.dir==='out');
+  else if(histFilter!=='all')  filtered=filtered.filter(t=>t.cat===histFilter);
 
-  const sumIn=filtered.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
-  const sumOut=filtered.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
-  const sumEl=el('hist-summary');
-  if(filtered.length){sumEl.innerHTML=`<div class="hist-summary"><div class="hist-stat"><span class="hist-stat-v" style="color:var(--green)">${fmt(sumIn)}</span><span class="hist-stat-l">In</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:var(--red)">${fmt(sumOut)}</span><span class="hist-stat-l">Out</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:${(sumIn-sumOut)>=0?'var(--green)':'var(--red)'}">${fmt(sumIn-sumOut)}</span><span class="hist-stat-l">Net</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:var(--blue)">${filtered.length}</span><span class="hist-stat-l">Count</span></div></div>`;}
-  else sumEl.innerHTML='';
+  const sumIn  = filtered.filter(t=>t.dir==='in' ).reduce((s,t)=>s+t.amt,0);
+  const sumOut = filtered.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
+  const sumEl  = el('hist-summary');
+  if(filtered.length){
+    sumEl.innerHTML = `<div class="hist-summary"><div class="hist-stat"><span class="hist-stat-v" style="color:var(--green)">${fmt(sumIn)}</span><span class="hist-stat-l">In</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:var(--red)">${fmt(sumOut)}</span><span class="hist-stat-l">Out</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:${(sumIn-sumOut)>=0?'var(--green)':'var(--red)'}">${fmt(sumIn-sumOut)}</span><span class="hist-stat-l">Net</span></div><div class="hist-stat"><span class="hist-stat-v" style="color:var(--blue)">${filtered.length}</span><span class="hist-stat-l">Count</span></div></div>`;
+  } else sumEl.innerHTML='';
 
-  const listEl=el('hist-list');
-  if(!filtered.length){listEl.innerHTML=renderEmptyDayRange(from,to);return;}
+  const listEl = el('hist-list');
+  if(!filtered.length){ listEl.innerHTML=renderEmptyDayRange(from,to); return; }
 
-  const byDate={};
-  filtered.forEach(t=>{if(!byDate[t.date])byDate[t.date]=[];byDate[t.date].push(t);});
-  const allDates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  const today=todayStr();
+  const byDate = {};
+  filtered.forEach(t=>{ if(!byDate[t.date]) byDate[t.date]=[]; byDate[t.date].push(t); });
+  const allDates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  const today = todayStr();
   let html='';
   allDates.forEach(dateStr=>{
-    const txs=byDate[dateStr];
-    const dayIn=txs.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
-    const dayOut=txs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
-    const dayNet=dayIn-dayOut;
-    const d=new Date(dateStr+'T00:00:00');
-    const isToday=dateStr===today;
-    const dayLabel=isToday?'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'}):d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short',year:'numeric'});
-    html+=`<div class="hist-day-group"><div class="hist-day-header" onclick="openDayModal('${dateStr}')"><span class="hist-day-label">${dayLabel}</span><div class="hist-day-right"><span class="hist-day-net ${dayNet>=0?'pos':'neg'}">${dayNet>=0?'+':''}${fmt(dayNet)}</span><span class="hist-add-btn">+ Add</span></div></div>${txs.map(t=>txItemHTML(t,true)).join('')}</div>`;
+    const txs    = byDate[dateStr];
+    const dayIn  = txs.filter(t=>t.dir==='in' ).reduce((s,t)=>s+t.amt,0);
+    const dayOut = txs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
+    const dayNet = dayIn-dayOut;
+    const d      = new Date(dateStr+'T00:00:00');
+    const isToday= dateStr===today;
+    const dayLabel = isToday
+      ? 'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'})
+      : d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+    html += `<div class="hist-day-group"><div class="hist-day-header" onclick="openDayModal('${dateStr}')"><span class="hist-day-label">${dayLabel}</span><div class="hist-day-right"><span class="hist-day-net ${dayNet>=0?'pos':'neg'}">${dayNet>=0?'+':''}${fmt(dayNet)}</span><span class="hist-add-btn">+ Add</span></div></div>${txs.map(t=>txItemHTML(t,true)).join('')}</div>`;
   });
-  listEl.innerHTML=html;
+  listEl.innerHTML = html;
 }
 
 function renderEmptyDayRange(from,to){
-  const dates=[];let cur=new Date(from+'T00:00:00'),end=new Date(to+'T00:00:00');
-  while(cur<=end&&dates.length<60){dates.push(cur.toISOString().slice(0,10));cur.setDate(cur.getDate()+1);}
+  const dates=[]; let cur=new Date(from+'T00:00:00'), end=new Date(to+'T00:00:00');
+  while(cur<=end&&dates.length<60){ dates.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
   dates.reverse();
   const today=todayStr();
   return dates.map(dateStr=>{
-    const d=new Date(dateStr+'T00:00:00');
-    const isToday=dateStr===today;
-    const label=isToday?'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'}):d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+    const d=new Date(dateStr+'T00:00:00'), isToday=dateStr===today;
+    const label = isToday
+      ? 'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'})
+      : d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short',year:'numeric'});
     return `<div class="hist-day-group"><div class="hist-day-header" onclick="openDayModal('${dateStr}')"><span class="hist-day-label" style="color:var(--txt3)">${label}</span><div class="hist-day-right"><span class="hist-day-net" style="color:var(--txt3)">no entries</span><span class="hist-add-btn">+ Add</span></div></div></div>`;
   }).join('');
 }
 
-function setHistFilter(filter,btn){histFilter=filter;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));btn.classList.add('active');renderHist();}
+function setHistFilter(filter,btn){
+  histFilter=filter;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  renderHist();
+}
 
-/* ── RENDER: GOALS ────────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   RENDER: GOALS
+═══════════════════════════════════════════════════ */
 function renderGoalProgress(){
-  if(!el('goal-in-progress'))return;
-  const[m0,m1]=getMonthRange();
-  const mIn=transactions.filter(t=>t.dir==='in'&&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
-  const mOut=transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
-  const saved=transactions.filter(t=>t.cat==='Savings').reduce((s,t)=>s+t.amt,0);
-  const rp=(id,cur,goal,inv)=>{const e=el(id);if(!e)return;if(!goal){e.innerHTML='';return;}e.innerHTML=buildProgBar('Progress',cur,goal,inv);};
-  rp('goal-in-progress',mIn,goals.inGoal,false);
-  rp('goal-out-progress',mOut,goals.outGoal,true);
+  if(!el('goal-in-progress')) return;
+  const [m0,m1]=getMonthRange();
+  const mIn  = transactions.filter(t=>t.dir==='in' &&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
+  const mOut = transactions.filter(t=>t.dir==='out'&&t.date>=m0&&t.date<=m1).reduce((s,t)=>s+t.amt,0);
+  const saved= transactions.filter(t=>t.cat==='Savings').reduce((s,t)=>s+t.amt,0);
+  const rp=(id,cur,goal,inv)=>{ const e=el(id); if(!e) return; if(!goal){e.innerHTML='';return;} e.innerHTML=buildProgBar('Progress',cur,goal,inv); };
+  rp('goal-in-progress',  mIn,  goals.inGoal,  false);
+  rp('goal-out-progress', mOut, goals.outGoal, true);
   rp('goal-save-progress',saved,goals.saveGoal,false);
 }
 
+/* ── NEW: Budget Goals Renderer (Goals Tab) ─────── */
+function renderBudgetGoals(){
+  const listEl = el('bgoal-list'); if(!listEl) return;
+  if(!budgetGoals.length){
+    listEl.innerHTML = `<div class="empty-state" style="padding:16px 0"><div class="empty-state-icon">🎯</div><div class="empty-state-title">No budget goals yet</div><div class="empty-state-sub">Add goals below — e.g. Rent, Food, Gym</div></div>`;
+    return;
+  }
+  listEl.innerHTML = budgetGoals.map(g=>{
+    const spent   = calcGoalSpent(g.id);
+    const pct     = Math.min(spent / g.budget, 1);
+    const pctW    = Math.round(pct * 100);
+    const remain  = g.budget - spent;
+    const {label, cls} = goalStatus(spent, g.budget);
+    return `
+      <div class="bgoal-item ${cls}">
+        <button class="bgoal-del" onclick="deleteBudgetGoal('${g.id}')" title="Delete goal">🗑️</button>
+        <div class="bgoal-top">
+          <div class="bgoal-icon">${g.icon}</div>
+          <div class="bgoal-name">${escHtml(g.name)}</div>
+          <div class="bgoal-status-pill ${cls}">${label}</div>
+        </div>
+        <div class="bgoal-bar-track">
+          <div class="bgoal-bar-fill ${cls}" style="width:${pctW}%"></div>
+        </div>
+        <div class="bgoal-meta">
+          <span>${pctW}% used</span>
+          <span class="bgoal-meta-amt">${fmt(spent)} / ${fmt(g.budget)}</span>
+          <span style="color:${remain<0?'var(--red)':'var(--txt3)'}">
+            ${remain<0 ? fmt(Math.abs(remain))+' over' : fmt(remain)+' left'}
+          </span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 function renderHabits(){
-  const listEl=el('habits-list');if(!listEl)return;
-  if(!habits.length){listEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">No habits yet</div><div class="empty-state-sub">Add habits below to start building streaks</div></div>`;return;}
+  const listEl=el('habits-list'); if(!listEl) return;
+  if(!habits.length){
+    listEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">No habits yet</div><div class="empty-state-sub">Add habits below to start building streaks</div></div>`;
+    return;
+  }
   const today=todayStr();
-  listEl.innerHTML=habits.map(h=>{const done=h.lastDone===today;return `<div class="habit-item"><span class="habit-icon">${h.icon}</span><div class="habit-body"><div class="habit-name">${escHtml(h.name)}</div><div class="habit-desc">${done?'✓ Done today!':'Not done yet today'}</div></div><div class="habit-streak"><span class="habit-streak-num">${h.streak||0}</span><span class="habit-streak-label">streak</span></div><button class="habit-check ${done?'done':''}" onclick="toggleHabit('${h.id}')">${done?'✓':''}</button><button class="habit-del" onclick="deleteHabit('${h.id}')">🗑️</button></div>`;}).join('');
+  listEl.innerHTML = habits.map(h=>{
+    const done=h.lastDone===today;
+    return `<div class="habit-item"><span class="habit-icon">${h.icon}</span><div class="habit-body"><div class="habit-name">${escHtml(h.name)}</div><div class="habit-desc">${done?'✓ Done today!':'Not done yet today'}</div></div><div class="habit-streak"><span class="habit-streak-num">${h.streak||0}</span><span class="habit-streak-label">streak</span></div><button class="habit-check ${done?'done':''}" onclick="toggleHabit('${h.id}')">${done?'✓':''}</button><button class="habit-del" onclick="deleteHabit('${h.id}')">🗑️</button></div>`;
+  }).join('');
 }
 
-/* ── PWA ──────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   PWA
+═══════════════════════════════════════════════════ */
 let deferredInstall;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;if(el('install-banner'))el('install-banner').style.display='flex';});
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); deferredInstall=e;
+  if(el('install-banner')) el('install-banner').style.display='flex';
+});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
-/* ── INIT ─────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════ */
 function initApp(){
-  const today=todayStr(),[m0,m1]=getMonthRange();
-  if(el('header-date'))el('header-date').textContent=todayLabel();
-  ['in-date','out-date'].forEach(id=>{const inp=el(id);if(inp&&!inp.value)inp.value=today;});
-  const sf=el('sp-from'),st=el('sp-to');if(sf&&!sf.value){sf.value=m0;st.value=m1;}
-  const hf=el('h-from'),ht=el('h-to');if(hf&&!hf.value){hf.value=today;ht.value=today;}
+  const today=todayStr(), [m0,m1]=getMonthRange();
+  if(el('header-date')) el('header-date').textContent = todayLabel();
+  ['in-date','out-date'].forEach(id=>{ const inp=el(id); if(inp&&!inp.value) inp.value=today; });
+  const sf=el('sp-from'),st=el('sp-to'); if(sf&&!sf.value){ sf.value=m0; st.value=m1; }
+  const hf=el('h-from'), ht=el('h-to'); if(hf&&!hf.value){ hf.value=today; ht.value=today; }
   const installBtn=el('install-btn');
-  if(installBtn)installBtn.addEventListener('click',()=>{if(deferredInstall){deferredInstall.prompt();deferredInstall.userChoice.then(c=>{if(c.outcome==='accepted')el('install-banner').style.display='none';});}});
+  if(installBtn) installBtn.addEventListener('click',()=>{
+    if(deferredInstall){ deferredInstall.prompt(); deferredInstall.userChoice.then(c=>{ if(c.outcome==='accepted') el('install-banner').style.display='none'; }); }
+  });
 }
+
 </script>
 </body>
 </html>

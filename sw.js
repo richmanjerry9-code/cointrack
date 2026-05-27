@@ -1,10 +1,15 @@
 const CACHE = 'cointrack-v1';
-const ASSETS = ['/', '/index.html', '/style.css', '/app.js'];
+const ASSETS = ['/', '/index.html', '/css.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache => cache.addAll(ASSETS))
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', e => {
