@@ -525,6 +525,17 @@ const auth = firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Persistence:',e.code));
 
+
+// TEMP DEBUG — remove after fixing
+setTimeout(() => {
+  const ls = el('loading-screen');
+  if (ls && ls.style.display !== 'none') {
+    ls.style.display = 'none';
+    el('login-screen').style.display = 'flex';
+    console.error('Auth timed out — Firebase never resolved');
+  }
+}, 5000);
+
 /* ═══════════════════════════════════════════════════
    APP STATE
 ═══════════════════════════════════════════════════ */
