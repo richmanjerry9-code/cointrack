@@ -507,7 +507,10 @@ const db   = firebase.firestore();
 const auth = firebase.auth();
 
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.warn);
-db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Persistence:',e.code));
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+if(!isMobile){
+  db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Persistence:',e.code));
+}
 
 /* ═══════════════════════════════════════
    APP STATE
