@@ -575,6 +575,15 @@ function getMonthRange(){const d=new Date(),m=String(d.getMonth()+1).padStart(2,
 function todayLabel(){return new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});}
 function daysInCurrentMonth(){const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();}
 function showToast(msg,type='green'){const t=el('toast');if(!t)return;t.textContent=msg;t.className=`toast show ${type}`;setTimeout(()=>{t.className='toast';},3000);}
+function getWeekRange(){
+  const today=new Date();
+  const day=today.getDay(); // 0=Sun
+  const diffToMon=day===0?-6:1-day;
+  const mon=new Date(today);mon.setDate(today.getDate()+diffToMon);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  const fmt2=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return [fmt2(mon),fmt2(sun)];
+}
 
 /* ── Get Monday of the week for a given date string ── */
 function getWeekStart(dateStr){
@@ -1256,14 +1265,21 @@ function drillCategory(cat){
 }
 
 /* ═══════════════════════════════════════
-   RENDER: HISTORY  (WEEKLY GROUPS)
+   RENDER: HISTORY  (FLAT DAILY LIST)
 ═══════════════════════════════════════ */
 function renderHist(){
   if(!el('h-from'))return;
-  const from=el('h-from').value||todayStr(),to=el('h-to').value||todayStr();
 
-  // Apply filter
-  let filtered=transactions.filter(t=>t.date>=from&&t.date<=to);
+  // Always read dates from inputs (they are set to last-7-days in initApp)
+  const from=el('h-from').value;
+  const to=el('h-to').value;
+  if(!from||!to) return;
+
+  // ALL transactions in range (unfiltered) — used for day totals
+  const allInRange=transactions.filter(t=>t.date>=from&&t.date<=to);
+
+  // Apply filter for summary bar only
+  let filtered=[...allInRange];
   if(histFilter==='in')       filtered=filtered.filter(t=>t.dir==='in');
   else if(histFilter==='out') filtered=filtered.filter(t=>t.dir==='out');
   else if(histFilter!=='all') filtered=filtered.filter(t=>t.cat===histFilter);
@@ -1280,141 +1296,87 @@ function renderHist(){
 
   const listEl=el('hist-list');
   const today=todayStr();
-  const currentWeekStart=getWeekStart(today);
 
-  // Build date → transactions map from filtered
-  const byDate={};
-  filtered.forEach(t=>{if(!byDate[t.date])byDate[t.date]=[];byDate[t.date].push(t);});
-
-  // Collect all dates in range (for empty days)
-  const allDatesInRange=[];
+  // Build ALL dates in range newest-first (always show every day)
+  const allDates=[];
   let cur=new Date(from+'T00:00:00'),end=new Date(to+'T00:00:00');
-  while(cur<=end&&allDatesInRange.length<366){
-    allDatesInRange.push(cur.toISOString().slice(0,10));
+  while(cur<=end&&allDates.length<366){
+    allDates.push(cur.toISOString().slice(0,10));
     cur.setDate(cur.getDate()+1);
   }
-  allDatesInRange.reverse(); // newest first
+  allDates.reverse();
 
-  // Group dates into weeks (keyed by Monday of week)
-  const weekMap={}; // weekStart → array of dateStrings
-  allDatesInRange.forEach(d=>{
-    const ws=getWeekStart(d);
-    if(!weekMap[ws])weekMap[ws]=[];
-    weekMap[ws].push(d);
-  });
+  // Map date → all transactions (unfiltered, for day header totals)
+  const byDateAll={};
+  allInRange.forEach(t=>{if(!byDateAll[t.date])byDateAll[t.date]=[];byDateAll[t.date].push(t);});
 
-  const sortedWeeks=Object.keys(weekMap).sort((a,b)=>b.localeCompare(a));
-
-  if(!sortedWeeks.length){
-    listEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No dates in range</div></div>`;
-    return;
-  }
+  // Map date → filtered transactions (for what shows inside when expanded)
+  const byDateFiltered={};
+  filtered.forEach(t=>{if(!byDateFiltered[t.date])byDateFiltered[t.date]=[];byDateFiltered[t.date].push(t);});
 
   let html='';
 
-  sortedWeeks.forEach(weekStart=>{
-    const isCurrentWeek=weekStart===currentWeekStart;
-    const datesInWeek=weekMap[weekStart]; // already newest-first
+  allDates.forEach(dateStr=>{
+    const isToday=dateStr===today;
+    // Header always uses ALL (unfiltered) transactions so in/out/net is always accurate
+    const allDayTxs=byDateAll[dateStr]||[];
+    const dayIn=allDayTxs.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
+    const dayOut=allDayTxs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
+    const dayNet=dayIn-dayOut;
+    const hasDayData=allDayTxs.length>0;
 
-    // Compute week totals from filtered transactions
-    const weekTxs=datesInWeek.flatMap(d=>byDate[d]||[]);
-    const weekIn=weekTxs.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
-    const weekOut=weekTxs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
-    const weekNet=weekIn-weekOut;
-    const hasData=weekTxs.length>0;
+    // Transactions to show inside when expanded (filtered)
+    const visibleTxs=byDateFiltered[dateStr]||[];
 
-    const weekLabel=isCurrentWeek?'This week':fmtWeekLabel(weekStart);
-    const currentBadge=isCurrentWeek?'<span class="hist-week-current-badge">NOW</span>':'';
-    const daySub=`${datesInWeek.length} day${datesInWeek.length!==1?'s':''}${hasData?' · '+weekTxs.length+' transaction'+(weekTxs.length!==1?'s':''):''}`;
+    const d=new Date(dateStr+'T00:00:00');
+    const dayLabel=isToday
+      ?'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})
+      :d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-    const weekInHtml=hasData&&weekIn>0?`<span class="hist-week-stat in">+${fmt(weekIn)}</span>`:'';
-    const weekOutHtml=hasData&&weekOut>0?`<span class="hist-week-stat out">-${fmt(weekOut)}</span>`:'';
-    const weekNetHtml=hasData?`<span class="hist-week-net ${weekNet>=0?'pos':'neg'}">${weekNet>=0?'+':''}${fmt(weekNet)}</span>`:'';
+    const dayBodyId=`day-body-${dateStr}`;
+    const dayChevronId=`day-chev-${dateStr}`;
+    const dayOpen=isToday&&hasDayData;
 
-    const weekBodyId=`week-body-${weekStart}`;
-    const weekChevronId=`week-chev-${weekStart}`;
-    // Current week is open by default
-    const weekOpen=isCurrentWeek;
-
-    html+=`<div class="hist-week-group">
-      <div class="hist-week-header" onclick="toggleWeek('${weekStart}')">
-        <div class="hist-week-left">
-          <span class="hist-week-chevron" id="${weekChevronId}" style="transform:rotate(${weekOpen?90:0}deg)">▶</span>
-          <div class="hist-week-meta">
-            <div class="hist-week-label">${weekLabel} ${currentBadge}</div>
-            <div class="hist-week-sub">${daySub}</div>
-          </div>
-        </div>
-        <div class="hist-week-right">${weekInHtml}${weekOutHtml}${weekNetHtml}</div>
-      </div>
-      <div class="hist-week-body${weekOpen?' open':''}" id="${weekBodyId}">`;
-
-    datesInWeek.forEach(dateStr=>{
-      const isToday=dateStr===today;
-      const dayTxs=byDate[dateStr]||[];
-      const dayIn=dayTxs.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
-      const dayOut=dayTxs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
-      const dayNet=dayIn-dayOut;
-      const hasDayData=dayTxs.length>0;
-      const dayLabel=fmtDayLabel(dateStr,isToday);
-
-      const dayBodyId=`day-body-${dateStr}`;
-      const dayChevronId=`day-chev-${dateStr}`;
-      // Today auto-expands if it has entries
-      const dayOpen=isToday&&hasDayData;
-
-      // Build day header right side
-      let dayRightHtml='';
-      if(hasDayData){
-        dayRightHtml=`<div class="hist-day-formula">
-          <span class="hist-day-in">+${fmt(dayIn)}</span>
-          <span class="hist-day-op"> − </span>
-          <span class="hist-day-out-val">${fmt(dayOut)}</span>
-          <span class="hist-day-eq"> = </span>
-          <span class="hist-day-net ${dayNet>=0?'pos':'neg'}">${fmt(dayNet)}</span>
-        </div>`;
-      } else {
-        dayRightHtml=`<span class="hist-day-empty-label">no entries</span>`;
-      }
-
-      html+=`<div class="hist-day-group">
-        <div class="hist-day-header" onclick="toggleDay('${dateStr}')">
-          <div class="hist-day-left">
-            <span class="hist-day-chevron${hasDayData?'':' empty'}" id="${dayChevronId}" style="transform:rotate(${dayOpen?90:0}deg)">${hasDayData?'›':'·'}</span>
-            <span class="hist-day-label${isToday?' today-label':''}">${dayLabel}</span>
-          </div>
-          <div class="hist-day-right">
-            ${dayRightHtml}
-            <button class="hist-add-btn" onclick="event.stopPropagation();openDayModal('${dateStr}')">+ Add</button>
-          </div>
-        </div>
-        <div class="hist-day-txs${dayOpen?' open':''}" id="${dayBodyId}">
-          ${hasDayData?dayTxs.map(t=>txItemHTML(t,true)).join(''):''}
-        </div>
+    // Day header right: colored formula or "no entries"
+    let dayRightHtml='';
+    if(hasDayData){
+      dayRightHtml=`<div class="hist-day-formula">
+        <span style="color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700">+${fmt(dayIn)}</span>
+        <span style="color:var(--txt3);font-size:11px;padding:0 2px">−</span>
+        <span style="color:var(--red);font-family:var(--mono);font-size:11px;font-weight:700">${fmt(dayOut)}</span>
+        <span style="color:var(--txt3);font-size:11px;padding:0 2px">=</span>
+        <span style="font-family:var(--mono);font-size:12px;font-weight:800;padding:2px 7px;border-radius:6px;${dayNet>=0?'color:var(--green);background:var(--green-dim)':'color:var(--red);background:var(--red-dim)'}">${fmt(dayNet)}</span>
       </div>`;
-    });
+    } else {
+      dayRightHtml=`<span style="font-size:11px;color:var(--txt3);font-style:italic">no entries</span>`;
+    }
 
-    html+='</div></div>'; // close week-body and week-group
+    html+=`<div class="hist-day-group" style="margin-bottom:6px">
+      <div class="hist-day-header" onclick="toggleDay('${dateStr}')">
+        <div class="hist-day-left">
+          <span id="${dayChevronId}" style="font-size:11px;color:${hasDayData?'var(--green)':'var(--txt3)'};width:14px;display:inline-block;transition:transform 0.2s;transform:rotate(${dayOpen?90:0}deg);flex-shrink:0">${hasDayData?'▶':'·'}</span>
+          <span class="hist-day-label${isToday?' today-label':''}">${dayLabel}</span>
+        </div>
+        <div class="hist-day-right">
+          ${dayRightHtml}
+          <button class="hist-add-btn" onclick="event.stopPropagation();openDayModal('${dateStr}')">+ Add</button>
+        </div>
+      </div>
+      <div class="hist-day-txs${dayOpen?' open':''}" id="${dayBodyId}">
+        ${visibleTxs.map(t=>txItemHTML(t,true)).join('')}
+      </div>
+    </div>`;
   });
 
-  listEl.innerHTML=html;
-}
-
-function toggleWeek(weekStart){
-  const body=el(`week-body-${weekStart}`);
-  const chev=el(`week-chev-${weekStart}`);
-  if(!body)return;
-  const isOpen=body.classList.contains('open');
-  body.classList.toggle('open',!isOpen);
-  if(chev)chev.style.transform=isOpen?'rotate(0deg)':'rotate(90deg)';
+  listEl.innerHTML=html||`<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No entries in this range</div></div>`;
 }
 
 function toggleDay(dateStr){
   const body=el(`day-body-${dateStr}`);
   const chev=el(`day-chev-${dateStr}`);
   if(!body)return;
-  // If no children (empty day), open add modal instead
-  if(!body.children.length){openDayModal(dateStr);return;}
+  // Empty day → open add modal
+  if(!body.innerHTML.trim()){openDayModal(dateStr);return;}
   const isOpen=body.classList.contains('open');
   body.classList.toggle('open',!isOpen);
   if(chev)chev.style.transform=isOpen?'rotate(0deg)':'rotate(90deg)';
@@ -1494,7 +1456,8 @@ function initApp(){
   if(el('header-date'))el('header-date').textContent=todayLabel();
   ['in-date','out-date'].forEach(id=>{const inp=el(id);if(inp&&!inp.value)inp.value=today;});
   const sf=el('sp-from'),st=el('sp-to');if(sf&&!sf.value){sf.value=m0;st.value=m1;}
-  const hf=el('h-from'),ht=el('h-to');if(hf&&!hf.value){hf.value=today;ht.value=today;}
+  const [hw0,hw1]=getWeekRange();
+  const hf=el('h-from'),ht=el('h-to');if(hf&&!hf.value){hf.value=hw0;ht.value=hw1;}
   setBgoalType('monthly');
   const installBtn=el('install-btn');
   if(installBtn)installBtn.addEventListener('click',()=>{
