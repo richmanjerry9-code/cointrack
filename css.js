@@ -304,6 +304,16 @@ select option{background:#1a1a1c;color:var(--txt)}
 .hist-add-btn{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--txt);font-size:12px;font-weight:800;padding:6px 14px;border-radius:20px;white-space:nowrap;flex-shrink:0;transition:all 0.2s}
 .hist-add-btn:hover{background:var(--green);color:#000;transform:scale(1.05);border-color:var(--green)}
 
+/* ── HISTORY COLLAPSIBLE ──────────────────────────── */
+.hist-day-collapsible{cursor:pointer;user-select:none}
+.hist-day-collapsible:hover{background:linear-gradient(90deg, var(--card2), transparent)}
+.hist-chevron{font-size:10px;color:var(--txt3);margin-left:8px;flex-shrink:0;transition:transform .2s}
+.hist-day-inout{display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:flex-end}
+.hist-day-body{padding:4px 0 8px;animation:fadeUp .25s var(--easing) both}
+.hist-add-day-btn{width:100%;margin-top:8px;padding:10px;background:rgba(255,255,255,.03);border:1px dashed var(--border2);border-radius:12px;color:var(--txt2);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;letter-spacing:.5px;text-transform:uppercase}
+.hist-add-day-btn:hover{background:var(--green-dim);color:var(--green);border-color:rgba(212,175,55,.4)}
+.hist-day-empty .hist-day-header{opacity:.65}
+
 /* ── ADD TO DAY MODAL ─────────────────────────────── */
 .modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;animation:fadeOverlay 0.3s var(--easing) both}
 @keyframes fadeOverlay{from{opacity:0}to{opacity:1}}
