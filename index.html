@@ -105,6 +105,44 @@
   .daily-budget-breakdown-title{font-size:11px;font-weight:700;color:#0a84ff;margin-bottom:6px;letter-spacing:.3px}
   .daily-budget-breakdown-row{display:flex;justify-content:space-between;font-size:12px;color:var(--txt2);padding:2px 0}
   .daily-budget-breakdown-total{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--txt);padding:6px 0 0;margin-top:4px;border-top:1px solid rgba(10,132,255,.2)}
+
+  /* ── HISTORY DAY TOGGLE ── */
+  .hist-day-txs{
+    display:grid;
+    grid-template-rows:0fr;
+    transition:grid-template-rows 0.3s cubic-bezier(0.16,1,0.3,1);
+    overflow:hidden;
+  }
+  .hist-day-txs > .hist-day-txs-inner{
+    min-height:0;
+    overflow:hidden;
+  }
+  .hist-day-txs.open{
+    grid-template-rows:1fr;
+  }
+
+  /* Edit modal badge */
+  .edit-modal-badge{display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:20px;border:1px solid transparent}
+
+  /* tx edit button */
+  .tx-edit{background:rgba(10,132,255,.15);border:1px solid rgba(10,132,255,.25);color:#3b82f6;width:32px;height:32px;border-radius:8px;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+  .tx-edit:hover{background:#3b82f6;color:#fff;transform:scale(1.1)}
+  .tx-actions{display:flex;gap:6px;flex-shrink:0}
+
+  /* History day header left */
+  .hist-day-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+  .hist-day-formula{display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+
+  /* chevron */
+  .hist-day-chev{
+    font-size:10px;
+    width:14px;
+    flex-shrink:0;
+    display:inline-block;
+    transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);
+    line-height:1;
+  }
+  .hist-day-chev.open{transform:rotate(90deg)}
 </style>
 </head>
 <body>
@@ -420,7 +458,7 @@
     <!-- HISTORY -->
     <section class="page" id="page-hist">
       <div class="section-title"><span class="dot dot-black"></span>Full history</div>
-      <p class="section-view-indicator" style="margin-bottom:10px">💡 Tap a week to expand days. Tap a day to see transactions. Tap "+ Add" to log a missed entry.</p>
+      <p class="section-view-indicator" style="margin-bottom:10px">💡 Tap a day row to expand its transactions. Tap "+ Add" to log a missed entry.</p>
       <div class="date-filter-row">
         <div class="form-group" style="margin:0"><label for="h-from">From</label><input type="date" id="h-from"></div>
         <div class="form-group" style="margin:0"><label for="h-to">To</label><input type="date" id="h-to"></div>
@@ -577,39 +615,12 @@ function daysInCurrentMonth(){const d=new Date();return new Date(d.getFullYear()
 function showToast(msg,type='green'){const t=el('toast');if(!t)return;t.textContent=msg;t.className=`toast show ${type}`;setTimeout(()=>{t.className='toast';},3000);}
 function getWeekRange(){
   const today=new Date();
-  const day=today.getDay(); // 0=Sun
+  const day=today.getDay();
   const diffToMon=day===0?-6:1-day;
   const mon=new Date(today);mon.setDate(today.getDate()+diffToMon);
   const sun=new Date(mon);sun.setDate(mon.getDate()+6);
   const fmt2=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   return [fmt2(mon),fmt2(sun)];
-}
-
-/* ── Get Monday of the week for a given date string ── */
-function getWeekStart(dateStr){
-  const d=new Date(dateStr+'T00:00:00');
-  const day=d.getDay(); // 0=Sun
-  const diff=day===0?-6:1-day; // shift to Monday
-  d.setDate(d.getDate()+diff);
-  return d.toISOString().slice(0,10);
-}
-function getWeekEnd(weekStartStr){
-  const d=new Date(weekStartStr+'T00:00:00');
-  d.setDate(d.getDate()+6);
-  return d.toISOString().slice(0,10);
-}
-function fmtWeekLabel(weekStartStr){
-  const s=new Date(weekStartStr+'T00:00:00');
-  const e=new Date(weekStartStr+'T00:00:00');
-  e.setDate(e.getDate()+6);
-  const sm=s.toLocaleDateString(undefined,{month:'short',day:'numeric'});
-  const em=e.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
-  return `${sm} – ${em}`;
-}
-function fmtDayLabel(dateStr,isToday){
-  const d=new Date(dateStr+'T00:00:00');
-  if(isToday) return 'Today · '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'});
-  return d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'});
 }
 
 /* ═══════════════════════════════════════
@@ -645,7 +656,7 @@ let openDrillCat    = null;
 let modalDir        = 'in';
 let modalTargetDate = '';
 let newBgoalType    = 'monthly';
-let editingTxId     = null; // id of tx being edited
+let editingTxId     = null;
 
 const CAT_ICONS={Food:'🍔',Transport:'🚗',Housing:'🏠',Bills:'🧾',Shopping:'🛍️',Entertainment:'🎬',Health:'💊',Savings:'💰',Airtime:'📱',Education:'📚',Clothing:'👗',Other:'📦'};
 
@@ -799,16 +810,12 @@ function openEditModal(txId){
   const tx=transactions.find(t=>t.id===txId);
   if(!tx)return;
   editingTxId=txId;
-
   el('edit-amt').value=tx.amt;
   el('edit-desc').value=tx.desc||'';
-
-  // Show/hide correct fields
   const isOut=tx.dir==='out';
   el('edit-cat-group').style.display=isOut?'block':'none';
   el('edit-in-cat-group').style.display=isOut?'none':'block';
   el('edit-goal-group').style.display=(isOut&&budgetGoals.length>0)?'block':'none';
-
   const badge=el('edit-modal-badge');
   if(badge){
     badge.textContent=isOut?'✏️ Money Out':'✏️ Money In';
@@ -816,10 +823,8 @@ function openEditModal(txId){
     badge.style.background=isOut?'var(--red-dim)':'var(--green-dim)';
     badge.style.borderColor=isOut?'rgba(225,29,72,0.3)':'rgba(212,175,55,0.3)';
   }
-
   if(isOut){
     el('edit-cat').value=tx.cat||'Other';
-    // Populate goal selector
     const eg=el('edit-goal');
     if(eg){
       const monthly=budgetGoals.filter(g=>goalType(g)==='monthly');
@@ -835,7 +840,6 @@ function openEditModal(txId){
   } else {
     el('edit-in-source').value=tx.desc||'';
   }
-
   el('edit-modal').style.display='block';
   document.body.style.overflow='hidden';
   setTimeout(()=>el('edit-amt').focus(),300);
@@ -852,21 +856,17 @@ async function saveEditTx(){
   if(!currentUser||!editingTxId)return;
   const tx=transactions.find(t=>t.id===editingTxId);
   if(!tx)return;
-
   const amt=parseFloat(el('edit-amt').value);
   if(!amt||amt<=0){showToast('Enter a valid amount','amber');return;}
-
   const isOut=tx.dir==='out';
   const desc=el('edit-desc').value.trim();
   if(!desc){showToast('Add a description','amber');return;}
-
   const updates={amt,desc};
   if(isOut){
     updates.cat=el('edit-cat').value;
     const eg=el('edit-goal');
     updates.goalId=eg&&eg.value?eg.value:firebase.firestore.FieldValue.delete();
   }
-
   try{
     await db.doc(`users/${currentUser.uid}/transactions/${editingTxId}`).update(updates);
     el('edit-modal').style.display='none';
@@ -1044,39 +1044,19 @@ function renderSavingsCard(mIn,mOut,allIn,allOut){
   const savedThisMonth=mIn-mOut;
   const netWorth=allIn-allOut;
   const projectGoals=budgetGoals.filter(g=>goalType(g)==='project');
-
   let projectHtml='';
   if(projectGoals.length){
     projectHtml=`<div style="margin-top:4px"><div class="dash-goals-section-label">💰 PROJECT GOALS</div>`+
       projectGoals.map(g=>{
         const spent=calcGoalSpent(g.id),pct=Math.min(spent/g.budget,1),pctW=Math.round(pct*100);
         const {label,cls}=projectGoalStatus(spent,g.budget);
-        return `<div class="bgoal-dash-item">
-          <div class="bgoal-dash-icon">${g.icon}</div>
-          <div class="bgoal-dash-info">
-            <div class="bgoal-dash-name">${escHtml(g.name)}</div>
-            <div class="bgoal-dash-track"><div class="bgoal-dash-fill ${cls}" style="width:${pctW}%"></div></div>
-          </div>
-          <div class="bgoal-dash-right">
-            <div class="bgoal-dash-spent">${fmt(spent)} / ${fmt(g.budget)}</div>
-            <div class="bgoal-dash-badge ${cls}">${label}</div>
-          </div>
-        </div>`;
+        return `<div class="bgoal-dash-item"><div class="bgoal-dash-icon">${g.icon}</div><div class="bgoal-dash-info"><div class="bgoal-dash-name">${escHtml(g.name)}</div><div class="bgoal-dash-track"><div class="bgoal-dash-fill ${cls}" style="width:${pctW}%"></div></div></div><div class="bgoal-dash-right"><div class="bgoal-dash-spent">${fmt(spent)} / ${fmt(g.budget)}</div><div class="bgoal-dash-badge ${cls}">${label}</div></div></div>`;
       }).join('')+'</div>';
   }
-
   card.innerHTML=`<div class="card-title">💰 Savings</div>
     <div class="savings-row">
-      <div class="savings-stat">
-        <div class="savings-stat-label">Saved this month</div>
-        <div class="savings-stat-val ${savedThisMonth>=0?'pos':'neg'}">${fmt(Math.abs(savedThisMonth))}</div>
-        <div class="savings-stat-sub">${savedThisMonth>=0?'income minus all spending':'spending exceeds income'}</div>
-      </div>
-      <div class="savings-stat">
-        <div class="savings-stat-label">Net worth (all time)</div>
-        <div class="savings-stat-val ${netWorth>=0?'pos':'neg'}">${fmt(Math.abs(netWorth))}</div>
-        <div class="savings-stat-sub">${netWorth>=0?'total balance':'overall deficit'}</div>
-      </div>
+      <div class="savings-stat"><div class="savings-stat-label">Saved this month</div><div class="savings-stat-val ${savedThisMonth>=0?'pos':'neg'}">${fmt(Math.abs(savedThisMonth))}</div><div class="savings-stat-sub">${savedThisMonth>=0?'income minus all spending':'spending exceeds income'}</div></div>
+      <div class="savings-stat"><div class="savings-stat-label">Net worth (all time)</div><div class="savings-stat-val ${netWorth>=0?'pos':'neg'}">${fmt(Math.abs(netWorth))}</div><div class="savings-stat-sub">${netWorth>=0?'total balance':'overall deficit'}</div></div>
     </div>${projectHtml}`;
 }
 
@@ -1086,11 +1066,9 @@ function renderDashBudgetGoals(){
   const nonProject=budgetGoals.filter(g=>goalType(g)!=='project');
   if(!nonProject.length){card.style.display='none';return;}
   card.style.display='block';
-
   const monthly=nonProject.filter(g=>goalType(g)==='monthly');
   const fixed=nonProject.filter(g=>goalType(g)==='fixed');
   let html='';
-
   if(monthly.length){
     html+=`<div class="dash-goals-section-label">📅 MONTHLY GOALS</div>`;
     html+=monthly.map(g=>{
@@ -1265,20 +1243,18 @@ function drillCategory(cat){
 }
 
 /* ═══════════════════════════════════════
-   RENDER: HISTORY  (FLAT DAILY LIST)
+   RENDER: HISTORY
 ═══════════════════════════════════════ */
 function renderHist(){
   if(!el('h-from'))return;
-
-  // Always read dates from inputs (they are set to last-7-days in initApp)
   const from=el('h-from').value;
   const to=el('h-to').value;
   if(!from||!to) return;
 
-  // ALL transactions in range (unfiltered) — used for day totals
+  // ALL transactions in range (unfiltered) — for accurate day header totals
   const allInRange=transactions.filter(t=>t.date>=from&&t.date<=to);
 
-  // Apply filter for summary bar only
+  // Filtered transactions — for what shows inside expanded days
   let filtered=[...allInRange];
   if(histFilter==='in')       filtered=filtered.filter(t=>t.dir==='in');
   else if(histFilter==='out') filtered=filtered.filter(t=>t.dir==='out');
@@ -1297,7 +1273,7 @@ function renderHist(){
   const listEl=el('hist-list');
   const today=todayStr();
 
-  // Build ALL dates in range newest-first (always show every day)
+  // Build all dates in range, newest first
   const allDates=[];
   let cur=new Date(from+'T00:00:00'),end=new Date(to+'T00:00:00');
   while(cur<=end&&allDates.length<366){
@@ -1306,11 +1282,11 @@ function renderHist(){
   }
   allDates.reverse();
 
-  // Map date → all transactions (unfiltered, for day header totals)
+  // Map date → all transactions (unfiltered, for header totals)
   const byDateAll={};
   allInRange.forEach(t=>{if(!byDateAll[t.date])byDateAll[t.date]=[];byDateAll[t.date].push(t);});
 
-  // Map date → filtered transactions (for what shows inside when expanded)
+  // Map date → filtered transactions (shown inside expanded day)
   const byDateFiltered={};
   filtered.forEach(t=>{if(!byDateFiltered[t.date])byDateFiltered[t.date]=[];byDateFiltered[t.date].push(t);});
 
@@ -1318,14 +1294,13 @@ function renderHist(){
 
   allDates.forEach(dateStr=>{
     const isToday=dateStr===today;
-    // Header always uses ALL (unfiltered) transactions so in/out/net is always accurate
     const allDayTxs=byDateAll[dateStr]||[];
     const dayIn=allDayTxs.filter(t=>t.dir==='in').reduce((s,t)=>s+t.amt,0);
     const dayOut=allDayTxs.filter(t=>t.dir==='out').reduce((s,t)=>s+t.amt,0);
     const dayNet=dayIn-dayOut;
     const hasDayData=allDayTxs.length>0;
 
-    // Transactions to show inside when expanded (filtered)
+    // Transactions shown when expanded (filtered)
     const visibleTxs=byDateFiltered[dateStr]||[];
 
     const d=new Date(dateStr+'T00:00:00');
@@ -1333,11 +1308,12 @@ function renderHist(){
       ?'Today — '+d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})
       :d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-    const dayBodyId=`day-body-${dateStr}`;
-    const dayChevronId=`day-chev-${dateStr}`;
-    const dayOpen=isToday&&hasDayData;
+    const bodyId=`day-body-${dateStr}`;
 
-    // Day header right: colored formula or "no entries"
+    // Today with data starts open; everything else starts closed
+    const startOpen=isToday&&hasDayData;
+
+    // Day header right side
     let dayRightHtml='';
     if(hasDayData){
       dayRightHtml=`<div class="hist-day-formula">
@@ -1351,10 +1327,16 @@ function renderHist(){
       dayRightHtml=`<span style="font-size:11px;color:var(--txt3);font-style:italic">no entries</span>`;
     }
 
-    html+=`<div class="hist-day-group" style="margin-bottom:6px">
-      <div class="hist-day-header" onclick="toggleDay('${dateStr}')">
+    html+=`
+    <div class="hist-day-group" style="margin-bottom:6px">
+      <div class="hist-day-header" onclick="toggleDay('${dateStr}',${hasDayData})">
         <div class="hist-day-left">
-          <span id="${dayChevronId}" style="font-size:11px;color:${hasDayData?'var(--green)':'var(--txt3)'};width:14px;display:inline-block;transition:transform 0.2s;transform:rotate(${dayOpen?90:0}deg);flex-shrink:0">${hasDayData?'▶':'·'}</span>
+          <span
+            id="chev-${dateStr}"
+            class="hist-day-chev${startOpen?' open':''}"
+            style="color:${hasDayData?'var(--green)':'var(--txt3)'}">
+            ${hasDayData?'▶':'·'}
+          </span>
           <span class="hist-day-label${isToday?' today-label':''}">${dayLabel}</span>
         </div>
         <div class="hist-day-right">
@@ -1362,8 +1344,15 @@ function renderHist(){
           <button class="hist-add-btn" onclick="event.stopPropagation();openDayModal('${dateStr}')">+ Add</button>
         </div>
       </div>
-      <div class="hist-day-txs${dayOpen?' open':''}" id="${dayBodyId}">
-        ${visibleTxs.map(t=>txItemHTML(t,true)).join('')}
+      <div class="hist-day-txs${startOpen?' open':''}" id="${bodyId}" data-has-entries="${hasDayData}">
+        <div class="hist-day-txs-inner">
+          ${visibleTxs.length
+            ? visibleTxs.map(t=>txItemHTML(t,true)).join('')
+            : hasDayData
+              ? `<p style="font-size:12px;color:var(--txt3);padding:10px 4px;font-style:italic">No transactions match current filter</p>`
+              : ''
+          }
+        </div>
       </div>
     </div>`;
   });
@@ -1371,15 +1360,20 @@ function renderHist(){
   listEl.innerHTML=html||`<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No entries in this range</div></div>`;
 }
 
-function toggleDay(dateStr){
+/* ── toggleDay: proper open/close with CSS grid animation ── */
+function toggleDay(dateStr, hasDayData){
+  // No data → open add modal instead
+  if(!hasDayData){
+    openDayModal(dateStr);
+    return;
+  }
   const body=el(`day-body-${dateStr}`);
-  const chev=el(`day-chev-${dateStr}`);
-  if(!body)return;
-  // Empty day → open add modal
-  if(!body.innerHTML.trim()){openDayModal(dateStr);return;}
+  const chev=el(`chev-${dateStr}`);
+  if(!body) return;
+
   const isOpen=body.classList.contains('open');
   body.classList.toggle('open',!isOpen);
-  if(chev)chev.style.transform=isOpen?'rotate(0deg)':'rotate(90deg)';
+  if(chev) chev.classList.toggle('open',!isOpen);
 }
 
 function setHistFilter(filter,btn){
